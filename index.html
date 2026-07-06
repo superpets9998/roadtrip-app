@@ -166,7 +166,10 @@
             <!-- Modal Header -->
             <div class="bg-emerald-800 text-stone-100 p-4 flex justify-between items-center">
                 <h3 id="modal-title" class="font-bold text-lg truncate pr-4">Challenge Titel</h3>
-                <button onclick="closeModal()" class="text-stone-300 hover:text-white text-2xl font-bold">&times;</button>
+                <div class="flex items-center space-x-3.5">
+                    <button id="modal-delete-btn" onclick="openDeleteConfirm()" class="text-stone-300 hover:text-red-400 text-lg transition-colors p-1" title="Element löschen">🗑️</button>
+                    <button onclick="closeModal()" class="text-stone-300 hover:text-white text-2xl font-bold leading-none">&times;</button>
+                </div>
             </div>
             
             <!-- Modal Content (Scrollbar) -->
@@ -257,6 +260,20 @@
         </div>
     </div>
 
+    <!-- Custom Element-Löschen Confirm Modal -->
+    <div id="delete-confirm-modal" class="hidden fixed inset-0 bg-stone-900/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
+            <div class="bg-red-800 text-stone-100 p-4 font-bold">🗑️ Element löschen?</div>
+            <div class="p-4 space-y-3">
+                <p class="text-sm text-stone-600">Möchtest du diese Challenge (inklusive aller hochgeladenen Fotos und Kommentare) wirklich unwiderruflich aus deinem Reisetagebuch entfernen?</p>
+            </div>
+            <div class="p-4 bg-stone-50 border-t border-stone-200 flex gap-2">
+                <button onclick="closeDeleteConfirmModal()" class="flex-1 bg-stone-200 text-stone-700 font-semibold py-2.5 rounded-xl text-sm hover:bg-stone-300">Abbrechen</button>
+                <button onclick="executeDelete()" class="flex-1 bg-red-800 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-red-950">Löschen</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Tab Navigation Bottom Bar -->
     <nav class="bg-white border-t border-stone-200 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-40 flex justify-around py-2 shadow-lg">
         <button onclick="switchTab('challenges')" id="tab-btn-challenges" class="flex flex-col items-center justify-center w-20 py-1 text-emerald-800 font-semibold transition-colors duration-200">
@@ -280,8 +297,6 @@
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- DEINE CLOUD CONFIGURATION ---
-        // Wenn die App in deinem interaktiven Web-Sandbox Canvas läuft, wird die Konfiguration automatisch beigestellt.
-        // Lokal liest sie die Standard-Umgebung aus.
         const firebaseConfig = typeof __firebase_config !== 'undefined' 
             ? JSON.parse(__firebase_config) 
             : { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
@@ -292,7 +307,6 @@
         let auth = null;
         let isFirebaseActive = false;
 
-        // Firebase Initialisierung, falls Config vorhanden ist
         if (firebaseConfig && firebaseConfig.projectId) {
             try {
                 const app = initializeApp(firebaseConfig);
@@ -359,47 +373,38 @@
         window.tempPhotosArray = [];
         window.tempClickLatlng = null;
 
-        // URL Parameter auswerten
         const urlParams = new URLSearchParams(window.location.search);
-        // Standardmäßig nutzen wir eine Trip-ID, die über URL übergeben wird
         window.tripId = urlParams.get('trip') || 'unser_roadtrip';
-        window.role = urlParams.get('role') || 'admin'; // 'admin' oder 'guest'
+        window.role = urlParams.get('role') || 'admin';
         window.isGuestMode = (window.role === 'guest');
 
         // --- INITIALISIERUNG ---
         window.onload = async function() {
-            // UI für Gastmodus einstellen
             if (window.isGuestMode) {
                 document.getElementById('guest-banner').classList.remove('hidden');
                 document.getElementById('app-subtitle').innerText = "Tagebuch im Betrachter-Modus";
                 document.getElementById('challenges-intro').innerText = "Schau dir an, welche Abenteuer auf der Reise gelöst wurden!";
                 document.getElementById('map-intro').innerText = "Entdecke die Route und klicke auf die Pins, um Fotos und Notizen live zu sehen.";
                 
-                // Admin-Karten ausblenden
                 document.getElementById('setup-add-challenge-card').classList.add('hidden');
                 document.getElementById('setup-data-card').classList.add('hidden');
             }
 
-            // Lade Trip Name ins Input-Feld im Setup
             document.getElementById('setup-trip-name-input').value = window.tripId;
             generateNfcLinks();
 
-            // Firebase Starten
             if (isFirebaseActive) {
-                // Rule 3: Auth first, wait for completion, then start listener
                 try {
                     await signInAnonymously(auth);
                 } catch (e) {
                     console.error("Anonyme Anmeldung fehlgeschlagen, arbeite offline:", e);
                 }
 
-                // Listener für Live-Daten aus der Cloud
                 document.getElementById('sync-banner').classList.remove('hidden');
                 document.getElementById('sync-trip-id').innerText = `Trip: ${window.tripId}`;
                 
                 startCloudSync();
             } else {
-                // Offline Fallback über LocalStorage
                 loadLocalState();
                 renderAll();
             }
@@ -407,29 +412,23 @@
 
         // --- CLOUD SYNCHRONISIERUNG (Echtzeit!) ---
         function startCloudSync() {
-            // Rule 1: Strict Paths -> /artifacts/{appId}/public/data/trips/{tripId}
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', window.tripId);
-            
             document.getElementById('sync-status').innerText = "Verbinde...";
 
-            // Echtzeit Listener für Datenbankänderungen
             onSnapshot(docRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.data();
                     
                     if (window.isGuestMode) {
-                        // Im Gastmodus filtern wir im Speicher sofort alles raus, was privat markiert ist
                         window.appState.challenges = (data.challenges || []).filter(c => c.visibleForGuests !== false);
                         window.appState.stops = (data.stops || []).filter(s => s.visibleForGuests !== false);
                     } else {
-                        // Der Admin sieht alle Daten
                         window.appState = data;
                     }
                     
                     document.getElementById('sync-status').innerText = "Live synchronisiert";
                     renderAll();
                 } else {
-                    // Falls noch kein Trip in der Cloud existiert, lege die Standard-Daten an
                     if (!window.isGuestMode) {
                         document.getElementById('sync-status').innerText = "Erstelle Trip in Cloud...";
                         window.appState = { challenges: defaultChallenges, stops: defaultStops };
@@ -449,7 +448,7 @@
         }
 
         function saveCloudState() {
-            if (window.isGuestMode) return; // Gäste dürfen nicht schreiben!
+            if (window.isGuestMode) return;
             
             if (isFirebaseActive && auth.currentUser) {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', window.tripId);
@@ -462,7 +461,6 @@
                         document.getElementById('sync-status').innerText = "Fehler beim Sichern";
                     });
             } else {
-                // Offline Speichern
                 localStorage.setItem(`roadtrip_${window.tripId}`, JSON.stringify(window.appState));
             }
         }
@@ -493,10 +491,8 @@
         // --- NFC LINK GENERATOR FÜR SETUP ---
         window.generateNfcLinks = function() {
             const inputVal = document.getElementById('setup-trip-name-input').value.trim();
-            // Bereinige Leerzeichen
             const cleanTripId = inputVal.replace(/\s+/g, '_') || 'mein_roadtrip';
             
-            // Ermittle die Basis URL der aktuell geöffneten App
             const baseUrl = window.location.origin + window.location.pathname;
 
             const adminUrl = `${baseUrl}?trip=${cleanTripId}&role=admin`;
@@ -533,14 +529,13 @@
             }
         };
 
-        // --- MAP-LOGIK (Leaflet) ---
+        // --- MAP-LOGIK ---
         function initMap() {
             if (window.mapInstance) {
                 window.mapInstance.invalidateSize();
                 return;
             }
 
-            // Karte zentrieren über Osteuropa (Mitte der Route)
             const centerLat = 46.5;
             const centerLng = 21.0;
 
@@ -554,7 +549,7 @@
             }).addTo(window.mapInstance);
 
             window.mapInstance.on('click', function(e) {
-                if (window.isGuestMode) return; // Betrachter dürfen keine Stopps anlegen
+                if (window.isGuestMode) return;
                 window.tempClickLatlng = e.latlng;
                 document.getElementById('add-stop-modal').classList.remove('hidden');
             });
@@ -680,21 +675,17 @@
                 document.getElementById('modal-desc').innerText = item.desc;
             }
 
-            // Fotos in Galerie laden
             if (item.photos && item.photos.length > 0) {
                 window.tempPhotosArray = [...item.photos];
             }
 
             renderModalPhotos();
 
-            // Kommentar füllen
             document.getElementById('modal-comment').value = item.comment || '';
 
-            // Sichtbarkeit für Gäste füllen
             const isVisible = item.visibleForGuests !== false;
             document.getElementById('modal-guest-visible').checked = isVisible;
 
-            // Anpassungen für Betrachter-Modus
             if (window.isGuestMode) {
                 document.getElementById('modal-upload-container').classList.add('hidden');
                 document.getElementById('modal-comment').readOnly = true;
@@ -702,6 +693,7 @@
                 document.getElementById('modal-comment').placeholder = "Noch keine Gedanken festgehalten.";
                 document.getElementById('modal-privacy-container').classList.add('hidden');
                 document.getElementById('modal-save-btn').classList.add('hidden');
+                document.getElementById('modal-delete-btn').classList.add('hidden');
             } else {
                 document.getElementById('modal-upload-container').classList.remove('hidden');
                 document.getElementById('modal-comment').readOnly = false;
@@ -709,6 +701,7 @@
                 document.getElementById('modal-comment').placeholder = "Wie war dieser Moment? Schreibe deine Gedanken auf...";
                 document.getElementById('modal-privacy-container').classList.remove('hidden');
                 document.getElementById('modal-save-btn').classList.remove('hidden');
+                document.getElementById('modal-delete-btn').classList.remove('hidden');
             }
 
             document.getElementById('detail-modal').classList.remove('hidden');
@@ -749,7 +742,7 @@
             window.currentlyEditingItem = null;
         };
 
-        // --- BILD-KOMPRIMIERUNG (600px, 70% Qualität) ---
+        // --- BILD-KOMPRIMIERUNG ---
         window.handleImageUpload = function(event) {
             if (window.isGuestMode) return;
             const files = event.target.files;
@@ -763,7 +756,7 @@
                     const img = new Image();
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 500; // Etwas kompakter, um noch schneller über mobile Netze zu synchronisieren!
+                        const MAX_WIDTH = 500;
                         let width = img.width;
                         let height = img.height;
 
@@ -778,7 +771,6 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
 
-                        // Komprimierung auf 65% JPEG-Qualität für rasanten Mobilfunk-Sync
                         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.65);
                         
                         window.tempPhotosArray.push(compressedBase64);
@@ -834,7 +826,33 @@
             showToast("Erfolgreich in Cloud gesichert!");
         };
 
-        // --- NEUER STOPP (Klick auf Map) ---
+        // --- ELEMENT LÖSCHEN LOGIK ---
+        window.openDeleteConfirm = function() {
+            document.getElementById('delete-confirm-modal').classList.remove('hidden');
+        };
+
+        window.closeDeleteConfirmModal = function() {
+            document.getElementById('delete-confirm-modal').classList.add('hidden');
+        };
+
+        window.executeDelete = function() {
+            if (!window.currentlyEditingItem || window.isGuestMode) return;
+            const { type, id } = window.currentlyEditingItem;
+
+            if (type === 'challenge') {
+                window.appState.challenges = window.appState.challenges.filter(c => c.id !== id);
+            } else if (type === 'stop') {
+                window.appState.stops = window.appState.stops.filter(s => s.id !== id);
+            }
+
+            saveCloudState();
+            renderAll();
+            closeDeleteConfirmModal();
+            closeModal();
+            showToast("Erfolgreich gelöscht!");
+        };
+
+        // --- NEUER STOPP ---
         window.closeAddStopModal = function() {
             document.getElementById('add-stop-modal').classList.add('hidden');
             window.tempClickLatlng = null;
@@ -951,3 +969,14 @@
     </script>
 </body>
 </html>
+```
+
+### So nutzt du die Löschfunktion:
+1. Öffne die Challenge (oder den Stopp), die du löschen möchtest.
+2. Oben rechts im grünen Header-Balken siehst du jetzt ein kleines **Mülleimer-Symbol (🗑️)** direkt neben dem Schließen-Kreuz ("&times;").
+3. Wenn du darauf tippst, öffnet sich ein schickes, an deine App angepasstes Bestätigungsfenster: *"Element löschen?"*.
+4. Sobald du auf **Löschen** klickst, wird das Element aus deiner Datenbank entfernt, die App speichert das sofort in der Cloud ab, aktualisiert die Liste und das Fenster schließt sich.
+
+*Hinweis:* Im Lese-Modus für die Eltern (`role=guest`) ist das Mülleimer-Symbol automatisch ausgeblendet, sodass sie keine Challenges löschen können.
+
+Kopiere den neuen Code einfach komplett über deine alte `index.html` in VS Code und lade sie wieder im Web-Interface deines GitHub-Repositories hoch. Viel Spaß beim fleißigen Aufräumen und Erstellen deines Roadtrips!
