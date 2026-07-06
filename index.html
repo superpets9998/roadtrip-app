@@ -114,12 +114,15 @@
             <!-- ================= NFC GENERATOR BEREICH ================= -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-emerald-100 space-y-3">
                 <h3 class="font-bold text-emerald-800 flex items-center gap-1.5 text-sm">📡 NFC-Chip Links generieren</h3>
-                <p class="text-xs text-stone-500 leading-relaxed">
+                <p id="setup-nfc-instruction" class="text-xs text-stone-500 leading-relaxed">
                     Gib deinem Trip einen einzigartigen Namen (z.B. <code class="bg-stone-100 px-1 py-0.5 rounded">roadtrip2026</code>), um deine Links zu erzeugen.
                 </p>
                 <div>
                     <label class="block text-[10px] font-bold text-stone-400 uppercase tracking-wide mb-1">Name deines Trips (Keine Leerzeichen)</label>
-                    <input id="setup-trip-name-input" type="text" value="unser_roadtrip" oninput="generateNfcLinks()" class="w-full p-2.5 border border-stone-300 rounded-xl text-sm focus:outline-emerald-600 font-mono">
+                    <div class="relative">
+                        <input id="setup-trip-name-input" type="text" value="unser_roadtrip" oninput="generateNfcLinks()" class="w-full p-2.5 border border-stone-300 rounded-xl text-sm focus:outline-emerald-600 font-mono">
+                        <span id="setup-lock-icon" class="hidden absolute right-3 top-3 text-stone-400">🔒 Sichert Cloud-ID</span>
+                    </div>
                 </div>
 
                 <div class="space-y-2 pt-2">
@@ -375,19 +378,22 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         window.tripId = urlParams.get('trip') || 'unser_roadtrip';
-        window.role = urlParams.get('role') || 'admin';
+        
+        // Erkennung der drei Rollen: 'owner' (Standard), 'admin' (Reisender), 'guest' (Eltern)
+        window.role = urlParams.get('role') || 'owner';
         window.isGuestMode = (window.role === 'guest');
+        window.isAdminMode = (window.role === 'admin'); // Reisender
+        window.isOwnerMode = (window.role === 'owner'); // Du (Ersteller)
 
-        // --- CODESET-MERGER (Aktualisiert die Texte live aus dem HTML-Code!) ---
+        // --- CODESET-MERGER ---
         function mergeWithDefaultData(loadedState) {
             if (!loadedState) return { challenges: defaultChallenges, stops: defaultStops };
             
-            // Herausforderungen mergen
             const mergedChallenges = defaultChallenges.map(defC => {
                 const savedC = (loadedState.challenges || []).find(c => c.id === defC.id);
                 if (savedC) {
                     return {
-                        ...defC, // Immer die brandneuen Titel & Beschreibungen direkt aus dem HTML-Code laden!
+                        ...defC,
                         completed: savedC.completed !== undefined ? savedC.completed : defC.completed,
                         photos: savedC.photos !== undefined ? savedC.photos : defC.photos,
                         comment: savedC.comment !== undefined ? savedC.comment : defC.comment,
@@ -397,15 +403,13 @@
                 return defC;
             });
 
-            // Eigene Herausforderungen, die unterwegs erstellt wurden, mitnehmen
             const customChallenges = (loadedState.challenges || []).filter(c => !c.id.startsWith('c'));
 
-            // Stopps mergen
             const mergedStops = defaultStops.map(defS => {
                 const savedS = (loadedState.stops || []).find(s => s.id === defS.id);
                 if (savedS) {
                     return {
-                        ...defS, // Daten aus dem Code bevorzugen
+                        ...defS,
                         visited: savedS.visited !== undefined ? savedS.visited : defS.visited,
                         photos: savedS.photos !== undefined ? savedS.photos : defS.photos,
                         comment: savedS.comment !== undefined ? savedS.comment : defS.comment,
@@ -425,6 +429,7 @@
 
         // --- INITIALISIERUNG ---
         window.onload = async function() {
+            // Falls Gast (Eltern)
             if (window.isGuestMode) {
                 document.getElementById('guest-banner').classList.remove('hidden');
                 document.getElementById('app-subtitle').innerText = "Tagebuch im Betrachter-Modus";
@@ -432,6 +437,19 @@
                 document.getElementById('map-intro').innerText = "Entdecke die Route und klicke auf die Pins, um Fotos und Notizen live zu sehen.";
                 
                 document.getElementById('setup-add-challenge-card').classList.add('hidden');
+                document.getElementById('setup-data-card').classList.add('hidden');
+            }
+
+            // Falls Reisender (Admin) oder Gast (Parents) -> Setup sperren
+            if (window.isAdminMode || window.isGuestMode) {
+                const tripInput = document.getElementById('setup-trip-name-input');
+                tripInput.disabled = true;
+                tripInput.classList.add('bg-stone-100', 'text-stone-500', 'cursor-not-allowed', 'pr-28');
+                document.getElementById('setup-lock-icon').classList.remove('hidden');
+                
+                document.getElementById('setup-nfc-instruction').innerText = "Dies sind deine aktiven Roadtrip-Links. Kopiere sie, um sie an deine Freunde oder Familie zu schicken.";
+                
+                // Werkseinstellungen-Card für beide komplett unsichtbar machen!
                 document.getElementById('setup-data-card').classList.add('hidden');
             }
 
@@ -455,7 +473,7 @@
             }
         };
 
-        // --- CLOUD SYNCHRONISIERUNG (Echtzeit!) ---
+        // --- CLOUD SYNCHRONISIERUNG ---
         function startCloudSync() {
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', window.tripId);
             document.getElementById('sync-status').innerText = "Verbinde...";
@@ -463,8 +481,6 @@
             onSnapshot(docRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.data();
-                    
-                    // Live-Zusammenführung der geänderten Code-Texte mit den Fotos der Cloud
                     const mergedData = mergeWithDefaultData(data);
 
                     if (window.isGuestMode) {
@@ -477,7 +493,7 @@
                     document.getElementById('sync-status').innerText = "Live synchronisiert";
                     renderAll();
                 } else {
-                    if (!window.isGuestMode) {
+                    if (window.isOwnerMode) {
                         document.getElementById('sync-status').innerText = "Erstelle Trip in Cloud...";
                         window.appState = { challenges: defaultChallenges, stops: defaultStops };
                         saveCloudState();
@@ -971,9 +987,9 @@
             showToast("Challenge gespeichert!");
         };
 
-        // --- RESET LOGIK ---
+        // --- RESET & EXPORT LOGIK (Gesperrt für Reisende und Gäste) ---
         window.resetToDefault = function() {
-            if (window.isGuestMode) return;
+            if (window.isGuestMode || window.isAdminMode) return;
             document.getElementById('confirm-modal').classList.remove('hidden');
         };
 
@@ -982,7 +998,7 @@
         };
 
         window.executeReset = function() {
-            if (window.isGuestMode) return;
+            if (window.isGuestMode || window.isAdminMode) return;
             
             window.appState = { challenges: defaultChallenges, stops: defaultStops };
             saveCloudState();
@@ -996,6 +1012,8 @@
         };
 
         window.exportData = function() {
+            if (window.isGuestMode || window.isAdminMode) return;
+            
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.appState));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
