@@ -599,7 +599,7 @@
                         if (syncStatus) syncStatus.innerText = "Fehler beim Sichern";
                     });
             } else {
-                window.push(window.ref(window.db, 'challenges'), data);
+                window.push(window.ref(window.db, 'challenges'), window.appState);
             }
         }
 
