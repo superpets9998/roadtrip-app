@@ -9,28 +9,6 @@
     <!-- Leaflet.js für eine fantastische, kostenlose interaktive Landkarte -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
-
-    // DEINE CONFIG HIER REIN
-    const firebaseConfig = {
-        apiKey: "AIzaSyB0dXgEGt_5ORH2yT9y8cAirUl_D65OGkc",
-        authDomain: "roadtripapp-a1297.firebaseapp.com",
-        projectId: "roadtripapp-a1297",
-        storageBucket: "roadtripapp-a1297.firebasestorage.app",
-        messagingSenderId: "177857055429",
-         appId: "1:177857055429:web:97948308a1c874c416beac",
-        measurementId: "G-GDN211J109"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    window.db = db; // Damit deine App überall auf 'db' zugreifen kann
-    window.ref = ref;
-    window.push = push;
-    window.onValue = onValue;
-    </script>
     <style>
         /* Custom Styles für ein natives App-Gefühl */
         .no-scrollbar::-webkit-scrollbar {
@@ -260,7 +238,7 @@
         <div class="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
             <div class="bg-emerald-800 text-stone-100 p-4 font-bold">📍 Neuen Stopp hinzufügen</div>
             <div class="p-4 space-y-3">
-                <p class="text-xs text-stone-500">Möchtest du dieser Route einen neuen Ort markieren?</p>
+                <p class="text-xs text-stone-500">Möchtest du diesen Ort auf deiner Roadtrip-Karte markieren?</p>
                 <input id="new-stop-name" type="text" placeholder="Name des Ortes (z.B. Eiffelturm, Alpenpass)" class="w-full p-2.5 border border-stone-300 rounded-xl text-sm focus:outline-emerald-600">
                 <input id="new-stop-desc" type="text" placeholder="Kurze Beschreibung" class="w-full p-2.5 border border-stone-300 rounded-xl text-sm focus:outline-emerald-600">
             </div>
@@ -356,7 +334,7 @@
             // Ortsgebundene Spezial-Challenges
             { id: 'c8', title: 'Konzert-Ekstase in Berlin 🎸', description: 'Halte den emotionalsten oder wildesten Moment des Konzerts in Berlin fest – z.B. mit deinem Band-Merch, dem Ticket oder direkt im Scheinwerferlicht der Menge.', completed: false, photos: [], comment: '', visibleForGuests: true },
             { id: 'c9', title: 'Ruinen-Bar-Entdecker in Budapest 🍻', description: 'Wie wäre es denn mit einem Besuch einer der legendären Ruinenbars (z.B. das "Szimpla Kert")? Halte dieses Erlebnis mit einem Foto fest (zB dein Getränk, die Location oder merkwürdige Dekoration).', completed: false, photos: [], comment: '', visibleForGuests: true },
-            { id: 'c10', title: 'Draculas Schatten in Sinaia 🌲', description: 'Mache beim Wandern in den dichten, nebligen Bergwäldern rund um Sinaia ein mystisches Foto, das direkt aus einem Vampirfilm stammen könnte.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c10', title: 'Draculas Schatten in Sinaia 🌲', description: 'Mach beim Wandern in den dichten, nebligen Bergwäldern rund um Sinaia ein mystisches Foto, das direkt aus einem Vampirfilm stammen könnte.', completed: false, photos: [], comment: '', visibleForGuests: true },
             { id: 'c11', title: 'Größenwahn in Bukarest 🏛️', description: 'Stelle dich vor den gigantischen Parlamentspalast (das zweitgrößte Gebäude der Welt!) und knipse ein Perspektiven-Foto, bei dem du den Palast scheinbar mit zwei Fingern anhebst.', completed: false, photos: [], comment: '', visibleForGuests: true },
             { id: 'c12', title: 'Kontinenten-Hopper in Istanbul 🚢', description: 'Fahre mit der Bosporus-Fähre von Europa rüber nach Asien. Mache ein Foto auf dem Deck mit einem traditionellen Glas türkischen Tee (Çay) und der Skyline im Hintergrund.', completed: false, photos: [], comment: '', visibleForGuests: true },
             
@@ -407,17 +385,15 @@
         window.isAdminMode = (window.role === 'admin'); // Reisender
         window.isOwnerMode = (window.role === 'owner'); // Du (Ersteller)
 
-        // --- STREAMING_CHUNK: Defining Code Merger... ---
-        // --- CODESET-MERGER (Aktualisiert die Texte live aus dem HTML-Code!) ---
+        // --- CODESET-MERGER ---
         function mergeWithDefaultData(loadedState) {
             if (!loadedState) return { challenges: defaultChallenges, stops: defaultStops };
             
-            // Herausforderungen mergen
             const mergedChallenges = defaultChallenges.map(defC => {
                 const savedC = (loadedState.challenges || []).find(c => c.id === defC.id);
                 if (savedC) {
                     return {
-                        ...defC, // Immer die brandneuen Titel & Beschreibungen direkt aus dem HTML-Code laden!
+                        ...defC,
                         completed: savedC.completed !== undefined ? savedC.completed : defC.completed,
                         photos: savedC.photos !== undefined ? savedC.photos : defC.photos,
                         comment: savedC.comment !== undefined ? savedC.comment : defC.comment,
@@ -427,15 +403,13 @@
                 return defC;
             });
 
-            // Eigene Herausforderungen, die unterwegs erstellt wurden, mitnehmen
             const customChallenges = (loadedState.challenges || []).filter(c => !c.id.startsWith('c'));
 
-            // Stopps mergen
             const mergedStops = defaultStops.map(defS => {
                 const savedS = (loadedState.stops || []).find(s => s.id === defS.id);
                 if (savedS) {
                     return {
-                        ...defS, 
+                        ...defS,
                         visited: savedS.visited !== undefined ? savedS.visited : defS.visited,
                         photos: savedS.photos !== undefined ? savedS.photos : defS.photos,
                         comment: savedS.comment !== undefined ? savedS.comment : defS.comment,
@@ -453,28 +427,17 @@
             };
         }
 
-        // --- STREAMING_CHUNK: Initializing user role custom view... ---
         // --- INITIALISIERUNG ---
         window.onload = async function() {
             // Falls Gast (Eltern)
             if (window.isGuestMode) {
-                const guestBanner = document.getElementById('guest-banner');
-                if (guestBanner) guestBanner.classList.remove('hidden');
+                document.getElementById('guest-banner').classList.remove('hidden');
+                document.getElementById('app-subtitle').innerText = "Tagebuch im Betrachter-Modus";
+                document.getElementById('challenges-intro').innerText = "Schau dir an, welche Abenteuer auf der Reise gelöst wurden!";
+                document.getElementById('map-intro').innerText = "Entdecke die Route und klicke auf die Pins, um Fotos und Notizen live zu sehen.";
                 
-                const subtitle = document.getElementById('app-subtitle');
-                if (subtitle) subtitle.innerText = "Tagebuch im Betrachter-Modus";
-                
-                const challengesIntro = document.getElementById('challenges-intro');
-                if (challengesIntro) challengesIntro.innerText = "Schau dir an, welche Abenteuer auf der Reise gelöst wurden!";
-                
-                const mapIntro = document.getElementById('map-intro');
-                if (mapIntro) mapIntro.innerText = "Entdecke die Route und klicke auf die Pins, um Fotos und Notizen live zu sehen.";
-                
-                const addChallengeCard = document.getElementById('setup-add-challenge-card');
-                if (addChallengeCard) addChallengeCard.classList.add('hidden');
-                
-                const dataCard = document.getElementById('setup-data-card');
-                if (dataCard) dataCard.classList.add('hidden');
+                document.getElementById('setup-add-challenge-card').classList.add('hidden');
+                document.getElementById('setup-data-card').classList.add('hidden');
 
                 // Setup-Navigationsbutton für Eltern komplett unsichtbar machen
                 const setupTabBtn = document.getElementById('tab-btn-setup');
@@ -484,46 +447,30 @@
             // Falls Reisender (Admin) oder Gast (Parents) -> Setup sperren
             if (window.isAdminMode || window.isGuestMode) {
                 const tripInput = document.getElementById('setup-trip-name-input');
-                if (tripInput) {
-                    tripInput.disabled = true;
-                    tripInput.classList.add('bg-stone-100', 'text-stone-500', 'cursor-not-allowed', 'pr-28');
-                }
-                const lockIcon = document.getElementById('setup-lock-icon');
-                if (lockIcon) lockIcon.classList.remove('hidden');
+                tripInput.disabled = true;
+                tripInput.classList.add('bg-stone-100', 'text-stone-500', 'cursor-not-allowed', 'pr-28');
+                document.getElementById('setup-lock-icon').classList.remove('hidden');
                 
                 // Werkseinstellungen-Card für beide komplett unsichtbar machen!
-                const dataCard = document.getElementById('setup-data-card');
-                if (dataCard) dataCard.classList.add('hidden');
+                document.getElementById('setup-data-card').classList.add('hidden');
             }
 
             // Spezifisches UI-CleanUp für Achim (Reisender / Admin)
             if (window.isAdminMode) {
-                const setupTabDesc = document.getElementById('setup-tab-desc');
-                if (setupTabDesc) setupTabDesc.innerText = "Teile diesen Link, damit andere dich live begleiten können.";
-                
-                const setupCardTitle = document.getElementById('setup-card-title');
-                if (setupCardTitle) setupCardTitle.innerHTML = "📣 Reise live teilen";
-                
-                const nfcInstruction = document.getElementById('setup-nfc-instruction');
-                if (nfcInstruction) nfcInstruction.innerText = "Schicke diesen Link an deine Familie oder Freunde, damit sie deine Abenteuer live verfolgen können!";
+                document.getElementById('setup-tab-desc').innerText = "Teile diesen Link, damit andere dich live begleiten können.";
+                document.getElementById('setup-card-title').innerHTML = "📣 Reise live teilen";
+                document.getElementById('setup-nfc-instruction').innerText = "Schicke diesen Link an deine Familie oder Freunde, damit sie deine Abenteuer live verfolgen können!";
                 
                 // Blende technische NFC-Eingaben aus
-                const tripBlock = document.getElementById('setup-trip-name-block');
-                if (tripBlock) tripBlock.classList.add('hidden');
-                
-                const adminCard = document.getElementById('setup-admin-link-card');
-                if (adminCard) adminCard.classList.add('hidden');
-                
-                const nfcHint = document.getElementById('setup-nfc-hint');
-                if (nfcHint) nfcHint.classList.add('hidden');
+                document.getElementById('setup-trip-name-block').classList.add('hidden');
+                document.getElementById('setup-admin-link-card').classList.add('hidden');
+                document.getElementById('setup-nfc-hint').classList.add('hidden');
                 
                 // Personalisiertes Teilen-Label statt kryptischem "Eltern-Chip"-Titel
-                const guestLinkLabel = document.getElementById('setup-guest-link-label');
-                if (guestLinkLabel) guestLinkLabel.innerText = "👉 HIER KANNST DU MICH AUF MEINER REISE BEGLEITEN:";
+                document.getElementById('setup-guest-link-label').innerText = "👉 HIER KANNST DU MICH AUF MEINER REISE BEGLEITEN:";
             }
 
-            const tripNameInput = document.getElementById('setup-trip-name-input');
-            if (tripNameInput) tripNameInput.value = window.tripId;
+            document.getElementById('setup-trip-name-input').value = window.tripId;
             generateNfcLinks();
 
             if (isFirebaseActive) {
@@ -533,11 +480,8 @@
                     console.error("Anonyme Anmeldung fehlgeschlagen, arbeite offline:", e);
                 }
 
-                const syncBanner = document.getElementById('sync-banner');
-                if (syncBanner) syncBanner.classList.remove('hidden');
-                
-                const syncTripId = document.getElementById('sync-trip-id');
-                if (syncTripId) syncTripId.innerText = `Trip: ${window.tripId}`;
+                document.getElementById('sync-banner').classList.remove('hidden');
+                document.getElementById('sync-trip-id').innerText = `Trip: ${window.tripId}`;
                 
                 startCloudSync();
             } else {
@@ -546,38 +490,39 @@
             }
         };
 
-        // --- STREAMING_CHUNK: Setting up Cloud Sync logic... ---
-        // --- CLOUD SYNCHRONISIERUNG (Echtzeit!) ---
+        // --- CLOUD SYNCHRONISIERUNG ---
         function startCloudSync() {
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', window.tripId);
-            const syncStatus = document.getElementById('sync-status');
-            if (syncStatus) syncStatus.innerText = "Verbinde...";
+            document.getElementById('sync-status').innerText = "Verbinde...";
 
             onSnapshot(docRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.data();
-                    
-                    // Live-Zusammenführung der geänderten Code-Texte mit den Fotos der Cloud
                     const mergedData = mergeWithDefaultData(data);
 
-                    window.appState = mergedData;
+                    if (window.isGuestMode) {
+                        window.appState.challenges = mergedData.challenges.filter(c => c.visibleForGuests !== false);
+                        window.appState.stops = mergedData.stops.filter(s => s.visibleForGuests !== false);
+                    } else {
+                        window.appState = mergedData;
+                    }
                     
-                    if (syncStatus) syncStatus.innerText = "Live synchronisiert";
+                    document.getElementById('sync-status').innerText = "Live synchronisiert";
                     renderAll();
                 } else {
-                    if (!window.isGuestMode) {
-                        if (syncStatus) syncStatus.innerText = "Erstelle Trip in Cloud...";
+                    if (window.isOwnerMode) {
+                        document.getElementById('sync-status').innerText = "Erstelle Trip in Cloud...";
                         window.appState = { challenges: defaultChallenges, stops: defaultStops };
                         saveCloudState();
                     } else {
-                        if (syncStatus) syncStatus.innerText = "Warte auf Trip-Daten...";
+                        document.getElementById('sync-status').innerText = "Warte auf Trip-Daten...";
                         window.appState = { challenges: [], stops: [] };
                         renderAll();
                     }
                 }
             }, (error) => {
                 console.error("Datenbankverbindungsfehler:", error);
-                if (syncStatus) syncStatus.innerText = "Offline-Modus aktiv";
+                document.getElementById('sync-status').innerText = "Offline-Modus aktiv";
                 loadLocalState();
                 renderAll();
             });
@@ -585,27 +530,19 @@
 
         function saveCloudState() {
             if (window.isGuestMode) return;
-
-            console.log("--- Firebase Check ---");
-            console.log("isFirebaseActive:", isFirebaseActive);
-            console.log("auth.currentUser:", auth.currentUser);
             
             if (isFirebaseActive && auth.currentUser) {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', window.tripId);
                 setDoc(docRef, window.appState)
                     .then(() => {
-                         const syncStatus = document.getElementById('sync-status');
-                         if (syncStatus) syncStatus.innerText = "In Cloud gesichert";
-                     })
+                        document.getElementById('sync-status').innerText = "In Cloud gesichert";
+                    })
                     .catch((err) => {
                         console.error("Fehler beim Cloud-Upload:", err);
-                        const syncStatus = document.getElementById('sync-status');
-                        if (syncStatus) syncStatus.innerText = "Fehler beim Sichern";
-                     });
+                        document.getElementById('sync-status').innerText = "Fehler beim Sichern";
+                    });
             } else {
-                // HIER: Nur lokal sichern, wenn die Cloud nicht bereit ist
                 localStorage.setItem(`roadtrip_${window.tripId}`, JSON.stringify(window.appState));
-                console.log("Offline: Lokal gesichert");
             }
         }
 
@@ -633,7 +570,6 @@
             }
         }
 
-        // --- STREAMING_CHUNK: Linking NFC Tools generator... ---
         // --- NFC LINK GENERATOR FÜR SETUP ---
         window.generateNfcLinks = function() {
             const inputVal = document.getElementById('setup-trip-name-input').value.trim();
@@ -644,11 +580,8 @@
             const adminUrl = `${baseUrl}?trip=${cleanTripId}&role=admin`;
             const guestUrl = `${baseUrl}?trip=${cleanTripId}&role=guest`;
 
-            const adminDisplay = document.getElementById('link-admin-display');
-            if (adminDisplay) adminDisplay.innerText = adminUrl;
-            
-            const guestDisplay = document.getElementById('link-guest-display');
-            if (guestDisplay) guestDisplay.innerText = guestUrl;
+            document.getElementById('link-admin-display').innerText = adminUrl;
+            document.getElementById('link-guest-display').innerText = guestUrl;
         };
 
         // --- TAB-NAVIGATION ---
@@ -664,14 +597,12 @@
             const tabs = ['challenges', 'map', 'setup'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-btn-${t}`);
-                if (btn) {
-                    if (t === tabId) {
-                        btn.classList.add('text-emerald-800');
-                        btn.classList.remove('text-stone-400');
-                    } else {
-                        btn.classList.add('text-stone-400');
-                        btn.classList.remove('text-emerald-800');
-                    }
+                if (t === tabId) {
+                    btn.classList.add('text-emerald-800');
+                    btn.classList.remove('text-stone-400');
+                } else {
+                    btn.classList.add('text-stone-400');
+                    btn.classList.remove('text-emerald-800');
                 }
             });
 
@@ -680,7 +611,6 @@
             }
         };
 
-        // --- STREAMING_CHUNK: Initializing interactive map... ---
         // --- MAP-LOGIK ---
         function initMap() {
             if (window.mapInstance) {
@@ -714,11 +644,6 @@
             window.mapMarkers = [];
 
             window.appState.stops.forEach((stop, index) => {
-                const isPrivateForGuest = window.isGuestMode && (stop.visibleForGuests === false);
-                if (isPrivateForGuest) {
-                    return; // Private Pins werden auf der Karte für Gäste komplett ausgeblendet!
-                }
-
                 const iconHtml = `<div class="custom-marker ${stop.visited ? 'completed' : ''}">${index + 1}</div>`;
                 const customIcon = L.divIcon({
                     html: iconHtml,
@@ -737,63 +662,40 @@
             });
         }
 
-        // --- STREAMING_CHUNK: Rendering challenges and stops lists... ---
         // --- LIST RENDERING ---
         function renderChallenges() {
             const listContainer = document.getElementById('challenges-list');
             listContainer.innerHTML = '';
 
             window.appState.challenges.forEach(challenge => {
-                const isPrivateForGuest = window.isGuestMode && (challenge.visibleForGuests === false);
-
                 const card = document.createElement('div');
-                
-                if (isPrivateForGuest) {
-                    // Frost-Glass / Blurred Locked-Card für Gäste (unschlagbare Optik)
-                    card.className = "bg-stone-100/50 p-4 rounded-2xl border border-stone-200/80 relative overflow-hidden select-none cursor-not-allowed shadow-sm";
-                    card.innerHTML = `
-                        <div class="filter blur-[3px] opacity-40 flex justify-between items-center w-full">
-                            <div class="flex-1 pr-3">
-                                <span class="font-bold text-sm text-stone-400">${challenge.title}</span>
-                                <p class="text-xs text-stone-300 mt-1 line-clamp-1">Dies ist ein privater Moment...</p>
-                            </div>
-                            <div class="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-lg text-stone-300">📸</div>
-                        </div>
-                        <div class="absolute inset-0 flex items-center justify-center bg-stone-900/5 backdrop-blur-[1.5px]">
-                            <span class="bg-stone-800/95 text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
-                                🔒 Privater Moment
-                            </span>
-                        </div>
-                    `;
-                } else {
-                    card.className = `bg-white p-4 rounded-2xl shadow-sm border transition-all cursor-pointer flex items-center justify-between ${
-                        challenge.completed ? 'border-amber-200 bg-amber-50/40' : 'border-stone-200 hover:border-emerald-500'
-                    }`;
-                    card.onclick = () => openDetailModal('challenge', challenge.id);
+                card.className = `bg-white p-4 rounded-2xl shadow-sm border transition-all cursor-pointer flex items-center justify-between ${
+                    challenge.completed ? 'border-amber-200 bg-amber-50/40' : 'border-stone-200 hover:border-emerald-500'
+                }`;
+                card.onclick = () => openDetailModal('challenge', challenge.id);
 
-                    const photoCount = challenge.photos ? challenge.photos.length : 0;
-                    const firstPhoto = photoCount > 0 ? challenge.photos[0] : '';
+                const photoCount = challenge.photos ? challenge.photos.length : 0;
+                const firstPhoto = photoCount > 0 ? challenge.photos[0] : '';
 
-                    card.innerHTML = `
-                        <div class="flex-1 pr-3">
-                            <div class="flex items-center gap-2">
-                                <span class="font-bold text-sm text-stone-800">${challenge.title}</span>
-                                ${challenge.completed ? '<span class="text-xs bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full">Erledigt</span>' : ''}
-                                ${!window.isGuestMode && !challenge.visibleForGuests ? '<span class="text-[9px] bg-stone-200 text-stone-600 px-1.5 py-0.5 rounded-md font-medium">🔒 Privat</span>' : ''}
-                            </div>
-                            <p class="text-xs text-stone-500 mt-1 line-clamp-2">${challenge.description}</p>
+                card.innerHTML = `
+                    <div class="flex-1 pr-3">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm text-stone-800">${challenge.title}</span>
+                            ${challenge.completed ? '<span class="text-xs bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full">Erledigt</span>' : ''}
+                            ${!window.isGuestMode && !challenge.visibleForGuests ? '<span class="text-[9px] bg-stone-200 text-stone-600 px-1.5 py-0.5 rounded-md font-medium">🔒 Privat</span>' : ''}
                         </div>
-                        <div class="flex-shrink-0 relative">
-                            ${firstPhoto 
-                                ? `
-                                    <img src="${firstPhoto}" class="w-12 h-12 object-cover rounded-xl border border-stone-200">
-                                    ${photoCount > 1 ? `<span class="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white font-bold text-[9px] w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white shadow">+${photoCount - 1}</span>` : ''}
-                                  ` 
-                                : `<div class="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-lg text-stone-400">📸</div>`
-                            }
-                        </div>
-                    `;
-                }
+                        <p class="text-xs text-stone-500 mt-1 line-clamp-2">${challenge.description}</p>
+                    </div>
+                    <div class="flex-shrink-0 relative">
+                        ${firstPhoto 
+                            ? `
+                                <img src="${firstPhoto}" class="w-12 h-12 object-cover rounded-xl border border-stone-200">
+                                ${photoCount > 1 ? `<span class="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white font-bold text-[9px] w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white shadow">+${photoCount - 1}</span>` : ''}
+                              ` 
+                            : `<div class="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-lg text-stone-400">📸</div>`
+                        }
+                    </div>
+                `;
                 listContainer.appendChild(card);
             });
         }
@@ -803,53 +705,32 @@
             stopsContainer.innerHTML = '';
 
             window.appState.stops.forEach((stop, index) => {
-                const isPrivateForGuest = window.isGuestMode && (stop.visibleForGuests === false);
-
                 const card = document.createElement('div');
-                
-                if (isPrivateForGuest) {
-                    card.className = "bg-stone-100/50 p-3 rounded-xl border border-stone-200/80 relative overflow-hidden select-none cursor-not-allowed flex items-center justify-between shadow-sm";
-                    card.innerHTML = `
-                        <div class="filter blur-[3px] opacity-40 flex items-center space-x-3 w-full">
-                            <span class="w-6 h-6 rounded-full bg-stone-300 text-white font-bold text-xs flex items-center justify-center">${index + 1}</span>
-                            <div>
-                                <h4 class="text-xs font-bold text-stone-400">Station ${index + 1}</h4>
-                                <p class="text-[11px] text-stone-300">Dieser Ort ist geschützt</p>
-                            </div>
-                        </div>
-                        <div class="absolute inset-0 flex items-center justify-center bg-stone-900/5 backdrop-blur-[1.5px]">
-                            <span class="bg-stone-700/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-0.5">
-                                🔒 Privat
-                            </span>
-                        </div>
-                    `;
-                } else {
-                    card.className = `bg-white p-3 rounded-xl border flex items-center justify-between cursor-pointer ${
-                        stop.visited ? 'border-amber-200 bg-amber-50/20' : 'border-stone-200'
-                    }`;
-                    card.onclick = () => {
-                        if (window.mapInstance) {
-                            window.mapInstance.setView([stop.lat, stop.lng], 9);
-                        }
-                        openDetailModal('stop', stop.id);
-                    };
+                card.className = `bg-white p-3 rounded-xl border flex items-center justify-between cursor-pointer ${
+                    stop.visited ? 'border-amber-200 bg-amber-50/20' : 'border-stone-200'
+                }`;
+                card.onclick = () => {
+                    if (window.mapInstance) {
+                        window.mapInstance.setView([stop.lat, stop.lng], 9);
+                    }
+                    openDetailModal('stop', stop.id);
+                };
 
-                    const photoCount = stop.photos ? stop.photos.length : 0;
+                const photoCount = stop.photos ? stop.photos.length : 0;
 
-                    card.innerHTML = `
-                        <div class="flex items-center space-x-3">
-                            <span class="w-6 h-6 rounded-full bg-emerald-800 text-white font-bold text-xs flex items-center justify-center">${index + 1}</span>
-                            <div>
-                                <h4 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">${stop.name} ${!window.isGuestMode && !stop.visibleForGuests ? '<span class="text-[8px] bg-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-normal">🔒 Privat</span>' : ''}</h4>
-                                <p class="text-[11px] text-stone-500 line-clamp-1">${stop.desc}</p>
-                            </div>
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="w-6 h-6 rounded-full bg-emerald-800 text-white font-bold text-xs flex items-center justify-center">${index + 1}</span>
+                        <div>
+                            <h4 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">${stop.name} ${!window.isGuestMode && !stop.visibleForGuests ? '<span class="text-[8px] bg-stone-200 text-stone-600 px-1 py-0.2 rounded font-normal">🔒 Privat</span>' : ''}</h4>
+                            <p class="text-[11px] text-stone-500 line-clamp-1">${stop.desc}</p>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            ${stop.visited ? `<span class="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-bold">Besucht (${photoCount})</span>` : '<span class="text-[10px] text-stone-400">Offen</span>'}
-                            <span class="text-stone-400 text-xs">➔</span>
-                        </div>
-                    `;
-                }
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        ${stop.visited ? `<span class="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-bold">Besucht (${photoCount})</span>` : '<span class="text-[10px] text-stone-400">Offen</span>'}
+                        <span class="text-stone-400 text-xs">➔</span>
+                    </div>
+                `;
                 stopsContainer.appendChild(card);
             });
         }
@@ -860,31 +741,18 @@
             document.getElementById('challenge-stats').innerText = `${completed}/${total} gelöst`;
         }
 
-        // --- STREAMING_CHUNK: Designing Detail Modal controls... ---
         // --- DETAIL MODAL LOGIK ---
         window.openDetailModal = function(type, id) {
-            let item = null;
-            if (type === 'challenge') {
-                item = window.appState.challenges.find(c => c.id === id);
-            } else {
-                item = window.appState.stops.find(s => s.id === id);
-            }
-
-            if (!item) return;
-
-            // Absolute Sicherheits-Sperre: Wenn ein Gast versucht, ein privates Item zu öffnen, blockieren!
-            if (window.isGuestMode && item.visibleForGuests === false) {
-                showToast("🔒 Dieser Inhalt wurde privat geschützt.");
-                return;
-            }
-
             window.currentlyEditingItem = { type, id };
             window.tempPhotosArray = [];
 
+            let item = null;
             if (type === 'challenge') {
+                item = window.appState.challenges.find(c => c.id === id);
                 document.getElementById('modal-title').innerText = item.title;
                 document.getElementById('modal-desc').innerText = item.description;
             } else {
+                item = window.appState.stops.find(s => s.id === id);
                 document.getElementById('modal-title').innerText = `📍 Stopp: ${item.name}`;
                 document.getElementById('modal-desc').innerText = item.desc;
             }
@@ -956,7 +824,6 @@
             window.currentlyEditingItem = null;
         };
 
-        // --- STREAMING_CHUNK: Image optimization and upload routines... ---
         // --- BILD-KOMPRIMIERUNG ---
         window.handleImageUpload = function(event) {
             if (window.isGuestMode) return;
@@ -1041,7 +908,6 @@
             showToast("Erfolgreich in Cloud gesichert!");
         };
 
-        // --- STREAMING_CHUNK: Setting up delete handlers... ---
         // --- ELEMENT LÖSCHEN LOGIK ---
         window.openDeleteConfirm = function() {
             document.getElementById('delete-confirm-modal').classList.remove('hidden');
@@ -1138,8 +1004,7 @@
             showToast("Challenge gespeichert!");
         };
 
-        // --- STREAMING_CHUNK: Managing default reset values... ---
-        // --- RESET & EXPORT LOGIK ---
+        // --- RESET & EXPORT LOGIK (Gesperrt für Reisende und Gäste) ---
         window.resetToDefault = function() {
             if (window.isGuestMode || window.isAdminMode) return;
             document.getElementById('confirm-modal').classList.remove('hidden');
@@ -1179,13 +1044,11 @@
         // --- TOAST NOTIFICATION ---
         function showToast(message) {
             const toast = document.getElementById('toast');
-            if (toast) {
-                toast.innerText = message;
-                toast.classList.remove('hidden');
-                setTimeout(() => {
-                    toast.classList.add('hidden');
-                }, 3000);
-            }
+            toast.innerText = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
         }
     </script>
 </body>
