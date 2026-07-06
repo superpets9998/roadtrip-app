@@ -590,16 +590,18 @@
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', window.tripId);
                 setDoc(docRef, window.appState)
                     .then(() => {
-                        const syncStatus = document.getElementById('sync-status');
-                        if (syncStatus) syncStatus.innerText = "In Cloud gesichert";
-                    })
+                         const syncStatus = document.getElementById('sync-status');
+                         if (syncStatus) syncStatus.innerText = "In Cloud gesichert";
+                     })
                     .catch((err) => {
                         console.error("Fehler beim Cloud-Upload:", err);
                         const syncStatus = document.getElementById('sync-status');
                         if (syncStatus) syncStatus.innerText = "Fehler beim Sichern";
-                    });
+                     });
             } else {
-                window.push(window.ref(window.db, 'challenges'), window.appState);
+                // HIER: Nur lokal sichern, wenn die Cloud nicht bereit ist
+                localStorage.setItem(`roadtrip_${window.tripId}`, JSON.stringify(window.appState));
+                console.log("Offline: Lokal gesichert");
             }
         }
 
