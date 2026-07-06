@@ -331,8 +331,8 @@
             // Ortsgebundene Spezial-Challenges
             { id: 'c8', title: 'Konzert-Ekstase in Berlin 🎸', description: 'Halte den emotionalsten oder wildesten Moment des Konzerts in Berlin fest – z.B. mit deinem Band-Merch, dem Ticket oder direkt im Scheinwerferlicht der Menge.', completed: false, photos: [], comment: '', visibleForGuests: true },
             { id: 'c9', title: 'Ruinen-Bar-Entdecker in Budapest 🍻', description: 'Wie wäre es denn mit einem Besuch einer der legendären Ruinenbars (z.B. das "Szimpla Kert")? Halte dieses Erlebnis mit einem Foto fest (zB dein Getränk, die Location oder merkwürdige Dekoration).', completed: false, photos: [], comment: '', visibleForGuests: true },
-            { id: 'c10', title: 'Draculas Schatten in Sinaia 🌲', description: 'Mache beim Wandern in den dichten, nebligen Bergwäldern rund um Sinaia ein mystisches Foto, das direkt aus einem Vampirfilm stammen könnte.', completed: false, photos: [], comment: '', visibleForGuests: true },
-            { id: 'c11', title: 'Größenwahn in Bukarest 🏛️', description: 'Stelle dich vor den gigantischen Parlamentspalast (das zweitgrößte Gebäude der Welt!) und knipse ein Perspektiven-Foto, bei dem du den Palast scheinbar mit zwei Fingern hebst.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c10', title: 'Draculas Schatten in Sinaia 🌲', description: 'Mach beim Wandern in den dichten, nebligen Bergwäldern rund um Sinaia ein mystisches Foto, das direkt aus einem Vampirfilm stammen könnte.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c11', title: 'Größenwahn in Bukarest 🏛️', description: 'Stelle dich vor den gigantischen Parlamentspalast (das zweitgrößte Gebäude der Welt!) und knipse ein Perspektiven-Foto, bei dem du den Palast scheinbar mit zwei Fingern anhebst.', completed: false, photos: [], comment: '', visibleForGuests: true },
             { id: 'c12', title: 'Kontinenten-Hopper in Istanbul 🚢', description: 'Fahre mit der Bosporus-Fähre von Europa rüber nach Asien. Mache ein Foto auf dem Deck mit einem traditionellen Glas türkischen Tee (Çay) und der Skyline im Hintergrund.', completed: false, photos: [], comment: '', visibleForGuests: true },
             
             // Lieblingsfotos & Erinnerungen
@@ -378,6 +378,51 @@
         window.role = urlParams.get('role') || 'admin';
         window.isGuestMode = (window.role === 'guest');
 
+        // --- CODESET-MERGER (Aktualisiert die Texte live aus dem HTML-Code!) ---
+        function mergeWithDefaultData(loadedState) {
+            if (!loadedState) return { challenges: defaultChallenges, stops: defaultStops };
+            
+            // Herausforderungen mergen
+            const mergedChallenges = defaultChallenges.map(defC => {
+                const savedC = (loadedState.challenges || []).find(c => c.id === defC.id);
+                if (savedC) {
+                    return {
+                        ...defC, // Immer die brandneuen Titel & Beschreibungen direkt aus dem HTML-Code laden!
+                        completed: savedC.completed !== undefined ? savedC.completed : defC.completed,
+                        photos: savedC.photos !== undefined ? savedC.photos : defC.photos,
+                        comment: savedC.comment !== undefined ? savedC.comment : defC.comment,
+                        visibleForGuests: savedC.visibleForGuests !== undefined ? savedC.visibleForGuests : defC.visibleForGuests
+                    };
+                }
+                return defC;
+            });
+
+            // Eigene Herausforderungen, die unterwegs erstellt wurden, mitnehmen
+            const customChallenges = (loadedState.challenges || []).filter(c => !c.id.startsWith('c'));
+
+            // Stopps mergen
+            const mergedStops = defaultStops.map(defS => {
+                const savedS = (loadedState.stops || []).find(s => s.id === defS.id);
+                if (savedS) {
+                    return {
+                        ...defS, // Daten aus dem Code bevorzugen
+                        visited: savedS.visited !== undefined ? savedS.visited : defS.visited,
+                        photos: savedS.photos !== undefined ? savedS.photos : defS.photos,
+                        comment: savedS.comment !== undefined ? savedS.comment : defS.comment,
+                        visibleForGuests: savedS.visibleForGuests !== undefined ? savedS.visibleForGuests : defS.visibleForGuests
+                    };
+                }
+                return defS;
+            });
+
+            const customStops = (loadedState.stops || []).filter(s => !s.id.startsWith('s'));
+
+            return {
+                challenges: [...mergedChallenges, ...customChallenges],
+                stops: [...mergedStops, ...customStops]
+            };
+        }
+
         // --- INITIALISIERUNG ---
         window.onload = async function() {
             if (window.isGuestMode) {
@@ -419,11 +464,14 @@
                 if (snapshot.exists()) {
                     const data = snapshot.data();
                     
+                    // Live-Zusammenführung der geänderten Code-Texte mit den Fotos der Cloud
+                    const mergedData = mergeWithDefaultData(data);
+
                     if (window.isGuestMode) {
-                        window.appState.challenges = (data.challenges || []).filter(c => c.visibleForGuests !== false);
-                        window.appState.stops = (data.stops || []).filter(s => s.visibleForGuests !== false);
+                        window.appState.challenges = mergedData.challenges.filter(c => c.visibleForGuests !== false);
+                        window.appState.stops = mergedData.stops.filter(s => s.visibleForGuests !== false);
                     } else {
-                        window.appState = data;
+                        window.appState = mergedData;
                     }
                     
                     document.getElementById('sync-status').innerText = "Live synchronisiert";
@@ -470,7 +518,8 @@
             const savedData = localStorage.getItem(`roadtrip_${window.tripId}`);
             if (savedData) {
                 try {
-                    window.appState = JSON.parse(savedData);
+                    const parsed = JSON.parse(savedData);
+                    window.appState = mergeWithDefaultData(parsed);
                 } catch (e) {
                     window.appState = { challenges: defaultChallenges, stops: defaultStops };
                 }
@@ -969,4 +1018,3 @@
     </script>
 </body>
 </html>
-```
