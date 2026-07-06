@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Roadtrip Companion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+        import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+
+        // --- HIER DEINEN CONFIG-BLOCK EINFÜGEN ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyB0dXgEGt_5ORH2yT9y8cAirUl_D65OGkc",
+            authDomain: "roadtripapp-a1297.firebaseapp.com",
+            projectId: "roadtripapp-a1297",
+            storageBucket: "roadtripapp-a1297.firebasestorage.app",
+            messagingSenderId: "177857055429",
+            appId: "1:177857055429:web:97948308a1c874c416beac",
+            measurementId: "G-GDN211J109"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Daten senden
+        document.getElementById('addBtn').onclick = () => {
+            const title = document.getElementById('title').value;
+            const desc = document.getElementById('desc').value;
+            if(title && desc) {
+                push(ref(db, 'challenges'), { title, desc, timestamp: Date.now() });
+                document.getElementById('title').value = '';
+                document.getElementById('desc').value = '';
+            }
+        };
+
+        // Daten live empfangen
+        onValue(ref(db, 'challenges'), (snapshot) => {
+            const data = snapshot.val();
+            const container = document.getElementById('container');
+            container.innerHTML = '';
+            if (data) {
+                Object.entries(data).reverse().forEach(([key, c]) => {
+                    container.innerHTML += `
+                        <div class="bg-white p-4 rounded shadow border-l-4 border-blue-500">
+                            <h3 class="font-bold text-lg">${c.title}</h3>
+                            <p class="text-gray-600">${c.desc}</p>
+                        </div>
+                    `;
+                });
+            }
+        });
+    </script>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-2xl font-bold mb-4">Roadtrip Aufgaben</h1>
+        <div class="bg-white p-4 rounded shadow mb-6">
+            <input id="title" placeholder="Titel" class="w-full p-2 border mb-2 rounded">
+            <input id="desc" placeholder="Beschreibung" class="w-full p-2 border mb-2 rounded">
+            <button id="addBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Challenge hinzufügen</button>
+        </div>
+        <div id="container" class="space-y-4"></div>
+    </div>
+</body>
+</html>
