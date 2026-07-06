@@ -109,15 +109,15 @@
             <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
                 ⚙️ <span>Teilen & Setup</span>
             </h2>
-            <p class="text-sm text-stone-500">Konfiguriere deinen Trip und erstelle die Links für die NFC-Chips.</p>
+            <p id="setup-tab-desc" class="text-sm text-stone-500">Konfiguriere deinen Trip und erstelle die Links für die NFC-Chips.</p>
 
             <!-- ================= NFC GENERATOR BEREICH ================= -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-emerald-100 space-y-3">
-                <h3 class="font-bold text-emerald-800 flex items-center gap-1.5 text-sm">📡 NFC-Chip Links generieren</h3>
+                <h3 id="setup-card-title" class="font-bold text-emerald-800 flex items-center gap-1.5 text-sm">📡 NFC-Chip Links generieren</h3>
                 <p id="setup-nfc-instruction" class="text-xs text-stone-500 leading-relaxed">
                     Gib deinem Trip einen einzigartigen Namen (z.B. <code class="bg-stone-100 px-1 py-0.5 rounded">roadtrip2026</code>), um deine Links zu erzeugen.
                 </p>
-                <div>
+                <div id="setup-trip-name-block">
                     <label class="block text-[10px] font-bold text-stone-400 uppercase tracking-wide mb-1">Name deines Trips (Keine Leerzeichen)</label>
                     <div class="relative">
                         <input id="setup-trip-name-input" type="text" value="unser_roadtrip" oninput="generateNfcLinks()" class="w-full p-2.5 border border-stone-300 rounded-xl text-sm focus:outline-emerald-600 font-mono">
@@ -126,17 +126,17 @@
                 </div>
 
                 <div class="space-y-2 pt-2">
-                    <div class="bg-stone-50 p-3 rounded-lg border border-stone-200">
+                    <div id="setup-admin-link-card" class="bg-stone-50 p-3 rounded-lg border border-stone-200">
                         <p class="text-[11px] font-bold text-stone-700 mb-1">🔗 LINK FÜR SEINEN CHIP (Schreiber):</p>
                         <p id="link-admin-display" class="text-[10px] text-emerald-700 font-mono break-all select-all bg-white p-1.5 rounded border border-stone-100">Lade App im Internet hoch...</p>
                     </div>
 
-                    <div class="bg-stone-50 p-3 rounded-lg border border-stone-200">
-                        <p class="text-[11px] font-bold text-stone-700 mb-1">🔗 LINK FÜR ELTERN-CHIP (Betrachter):</p>
+                    <div id="setup-guest-link-card" class="bg-stone-50 p-3 rounded-lg border border-stone-200">
+                        <p id="setup-guest-link-label" class="text-[11px] font-bold text-stone-700 mb-1">🔗 LINK FÜR ELTERN-CHIP (Betrachter):</p>
                         <p id="link-guest-display" class="text-[10px] text-amber-700 font-mono break-all select-all bg-white p-1.5 rounded border border-stone-100">Lade App im Internet hoch...</p>
                     </div>
                 </div>
-                <p class="text-[10px] text-stone-400">Hinweis: Kopiere diese Links und brenne sie mit der App "NFC Tools" auf die jeweiligen Chips!</p>
+                <p id="setup-nfc-hint" class="text-[10px] text-stone-400">Hinweis: Kopiere diese Links und brenne sie mit der App "NFC Tools" auf die jeweiligen Chips!</p>
             </div>
 
             <!-- Manage Challenges -->
@@ -438,6 +438,10 @@
                 
                 document.getElementById('setup-add-challenge-card').classList.add('hidden');
                 document.getElementById('setup-data-card').classList.add('hidden');
+
+                // Setup-Navigationsbutton für Eltern komplett unsichtbar machen
+                const setupTabBtn = document.getElementById('tab-btn-setup');
+                if (setupTabBtn) setupTabBtn.classList.add('hidden');
             }
 
             // Falls Reisender (Admin) oder Gast (Parents) -> Setup sperren
@@ -447,10 +451,23 @@
                 tripInput.classList.add('bg-stone-100', 'text-stone-500', 'cursor-not-allowed', 'pr-28');
                 document.getElementById('setup-lock-icon').classList.remove('hidden');
                 
-                document.getElementById('setup-nfc-instruction').innerText = "Dies sind deine aktiven Roadtrip-Links. Kopiere sie, um sie an deine Freunde oder Familie zu schicken.";
-                
                 // Werkseinstellungen-Card für beide komplett unsichtbar machen!
                 document.getElementById('setup-data-card').classList.add('hidden');
+            }
+
+            // Spezifisches UI-CleanUp für Achim (Reisender / Admin)
+            if (window.isAdminMode) {
+                document.getElementById('setup-tab-desc').innerText = "Teile diesen Link, damit andere dich live begleiten können.";
+                document.getElementById('setup-card-title').innerHTML = "📣 Reise live teilen";
+                document.getElementById('setup-nfc-instruction').innerText = "Schicke diesen Link an deine Familie oder Freunde, damit sie deine Abenteuer live verfolgen können!";
+                
+                // Blende technische NFC-Eingaben aus
+                document.getElementById('setup-trip-name-block').classList.add('hidden');
+                document.getElementById('setup-admin-link-card').classList.add('hidden');
+                document.getElementById('setup-nfc-hint').classList.add('hidden');
+                
+                // Personalisiertes Teilen-Label statt kryptischem "Eltern-Chip"-Titel
+                document.getElementById('setup-guest-link-label').innerText = "👉 HIER KANNST DU MICH AUF MEINER REISE BEGLEITEN:";
             }
 
             document.getElementById('setup-trip-name-input').value = window.tripId;
