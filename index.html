@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roadtrip Abenteuer & Challenges</title>
+    <!-- Tailwind CSS für modernes, ansprechendes UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet.js für eine fantastische, kostenlose interaktive Landkarte -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* Custom Styles für ein natives App-Gefühl */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Leaflet Marker Styling Anpassungen */
+        .custom-marker {
+            background-color: #065f46;
+            border: 2px solid white;
+            border-radius: 50%;
+            color: white;
+            text-align: center;
+            line-height: 24px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+        }
+        .custom-marker.completed {
+            background-color: #b45309;
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800 font-sans min-h-screen flex flex-col max-w-md mx-auto shadow-2xl relative border-x border-stone-200">
+
+    <!-- Guest Mode Banner -->
+    <div id="guest-banner" class="hidden bg-amber-600 text-white px-4 py-2.5 text-xs font-bold flex items-center justify-between shadow-inner z-50 sticky top-0">
+        <span class="flex items-center gap-1.5">👀 <span>Betrachter-Modus (Live-Verbindung)</span></span>
+        <span class="text-[10px] bg-amber-800/60 px-2 py-0.5 rounded text-white font-normal">Nur Lesen</span>
+    </div>
+
+    <!-- Live Sync Banner -->
+    <div id="sync-banner" class="hidden bg-emerald-700 text-white px-4 py-1 text-[10px] font-semibold flex items-center justify-between z-40">
+        <span class="flex items-center gap-1">☁️ <span id="sync-status">Mit Cloud verbunden</span></span>
+        <span id="sync-trip-id" class="opacity-75 uppercase tracking-wider font-bold">Trip: ...</span>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-emerald-800 text-stone-100 p-4 sticky top-0 z-40 shadow-md flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <span class="text-2xl">🧭</span>
+            <div>
+                <h1 class="font-bold text-lg leading-tight tracking-wide">ROADTRIP ABENTEUER</h1>
+                <p id="app-subtitle" class="text-xs text-emerald-200">Dein interaktives Reise-Logbuch</p>
+            </div>
+        </div>
+        <!-- Custom Toast Notification Container -->
+        <div id="toast" class="hidden absolute top-16 left-4 right-4 bg-stone-900/95 text-stone-100 px-4 py-3 rounded-xl shadow-lg text-sm text-center transition-all duration-300 z-50"></div>
+    </header>
+
+    <!-- App Container für dynamischen Content -->
+    <main class="flex-1 overflow-y-auto p-4 pb-24 no-scrollbar">
+        
+        <!-- ================= SECTION: CHALLENGES ================= -->
+        <div id="section-challenges" class="space-y-4">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
+                    🏆 <span>Deine Challenges</span>
+                </h2>
+                <span id="challenge-stats" class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-full">0/0 gelöst</span>
+            </div>
+            
+            <p id="challenges-intro" class="text-sm text-stone-500 mb-4">Erfülle diese Aufgaben auf deiner Reise, halte die Momente mit Fotos fest und schreibe deine Gedanken dazu auf!</p>
+            
+            <!-- Dynamic Challenges List -->
+            <div id="challenges-list" class="space-y-3">
+                <!-- Wird per JS befüllt -->
+            </div>
+        </div>
+
+        <!-- ================= SECTION: MAP / STOPPS ================= -->
+        <div id="section-map" class="space-y-4 hidden">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
+                    🗺️ <span>Roadtrip Landkarte</span>
+                </h2>
+            </div>
+            <p id="map-intro" class="text-sm text-stone-500">Tippe auf die Pins auf der Karte, um deine Besuche zu dokumentieren, oder tippe irgendwo auf die Karte, um einen neuen Stopp hinzuzufügen!</p>
+            
+            <!-- Map Container -->
+            <div id="map-container" class="relative rounded-2xl overflow-hidden shadow-md border-2 border-stone-200 h-80 z-10">
+                <div id="map" class="h-full w-full"></div>
+            </div>
+
+            <!-- Stopps List -->
+            <div class="pt-2">
+                <h3 class="text-md font-semibold text-stone-700 mb-2">Deine Reiseroute & Stopps</h3>
+                <div id="stops-list" class="space-y-3">
+                    <!-- Wird per JS befüllt -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= SECTION: APP SETUP / CUSTOMIZER ================= -->
+        <div id="section-setup" class="space-y-4 hidden">
+            <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
+                ⚙️ <span>Teilen & Setup</span>
+            </h2>
+            <p class="text-sm text-stone-500">Konfiguriere deinen Trip und erstelle die Links für die NFC-Chips.</p>
+
+            <!-- ================= NFC GENERATOR BEREICH ================= -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-emerald-100 space-y-3">
+                <h3 class="font-bold text-emerald-800 flex items-center gap-1.5 text-sm">📡 NFC-Chip Links generieren</h3>
+                <p class="text-xs text-stone-500 leading-relaxed">
+                    Gib deinem Trip einen einzigartigen Namen (z.B. <code class="bg-stone-100 px-1 py-0.5 rounded">roadtrip2026</code>), um deine Links zu erzeugen.
+                </p>
+                <div>
+                    <label class="block text-[10px] font-bold text-stone-400 uppercase tracking-wide mb-1">Name deines Trips (Keine Leerzeichen)</label>
+                    <input id="setup-trip-name-input" type="text" value="unser_roadtrip" oninput="generateNfcLinks()" class="w-full p-2.5 border border-stone-300 rounded-xl text-sm focus:outline-emerald-600 font-mono">
+                </div>
+
+                <div class="space-y-2 pt-2">
+                    <div class="bg-stone-50 p-3 rounded-lg border border-stone-200">
+                        <p class="text-[11px] font-bold text-stone-700 mb-1">🔗 LINK FÜR SEINEN CHIP (Schreiber):</p>
+                        <p id="link-admin-display" class="text-[10px] text-emerald-700 font-mono break-all select-all bg-white p-1.5 rounded border border-stone-100">Lade App im Internet hoch...</p>
+                    </div>
+
+                    <div class="bg-stone-50 p-3 rounded-lg border border-stone-200">
+                        <p class="text-[11px] font-bold text-stone-700 mb-1">🔗 LINK FÜR ELTERN-CHIP (Betrachter):</p>
+                        <p id="link-guest-display" class="text-[10px] text-amber-700 font-mono break-all select-all bg-white p-1.5 rounded border border-stone-100">Lade App im Internet hoch...</p>
+                    </div>
+                </div>
+                <p class="text-[10px] text-stone-400">Hinweis: Kopiere diese Links und brenne sie mit der App "NFC Tools" auf die jeweiligen Chips!</p>
+            </div>
+
+            <!-- Manage Challenges -->
+            <div id="setup-add-challenge-card" class="bg-white p-4 rounded-xl shadow-sm border border-stone-200">
+                <h3 class="font-bold text-stone-700 mb-2 text-sm">🛠️ Neue Challenge hinzufügen</h3>
+                <div class="space-y-2">
+                    <input id="new-challenge-title" type="text" placeholder="z.B. Foto mit einem lustigen Ortsschild" class="w-full p-2 border border-stone-300 rounded-lg text-sm focus:outline-emerald-600">
+                    <textarea id="new-challenge-desc" placeholder="Beschreibe kurz die Aufgabe..." class="w-full p-2 border border-stone-300 rounded-lg text-sm focus:outline-emerald-600" rows="2"></textarea>
+                    <button onclick="addCustomChallenge()" class="w-full bg-stone-800 text-white font-semibold py-2 rounded-lg text-sm hover:bg-stone-950 transition">Challenge speichern</button>
+                </div>
+            </div>
+
+            <!-- Reset & Export (Owner) -->
+            <div id="setup-data-card" class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 space-y-3">
+                <h3 class="font-bold text-stone-700 text-sm">💾 Daten verwalten</h3>
+                <p class="text-xs text-stone-500">Sollte die Cloud-Verbindung einmal offline sein, kannst du deine Daten hier lokal sichern oder zurücksetzen.</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="resetToDefault()" class="bg-red-50 text-red-700 border border-red-200 font-semibold py-2 rounded-lg text-xs hover:bg-red-100 transition">Werkseinstellung</button>
+                    <button onclick="exportData()" class="bg-stone-100 text-stone-700 border border-stone-300 font-semibold py-2 rounded-lg text-xs hover:bg-stone-200 transition">Backup exportieren</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ================= MODALS (POPUP-WINDOWS) ================= -->
+    <!-- Detail Modal (für Challenges und Stopps) -->
+    <div id="detail-modal" class="hidden fixed inset-0 bg-stone-900/60 z-50 flex items-end sm:items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] transition-transform transform translate-y-0">
+            <!-- Modal Header -->
+            <div class="bg-emerald-800 text-stone-100 p-4 flex justify-between items-center">
+                <h3 id="modal-title" class="font-bold text-lg truncate pr-4">Challenge Titel</h3>
+                <button onclick="closeModal()" class="text-stone-300 hover:text-white text-2xl font-bold">&times;</button>
+            </div>
+            
+            <!-- Modal Content (Scrollbar) -->
+            <div class="p-4 space-y-4 overflow-y-auto no-scrollbar">
+                <p id="modal-desc" class="text-sm text-stone-600">Aufgabenbeschreibung hier...</p>
+                
+                <!-- Multi-Image Viewer / Grid -->
+                <div id="modal-images-wrapper" class="w-full bg-stone-100 rounded-xl border-2 border-dashed border-stone-300 p-3 min-h-[12rem] flex flex-col items-center justify-center">
+                    <div id="modal-img-placeholder" class="text-center p-4 space-y-2">
+                        <span class="text-3xl">📸</span>
+                        <p class="text-xs text-stone-500 font-semibold">Noch keine Fotos hochgeladen</p>
+                    </div>
+                    <!-- Dynamic grid of uploaded images -->
+                    <div id="modal-images-grid" class="hidden grid grid-cols-2 gap-2 w-full">
+                        <!-- Wird per JS befüllt -->
+                    </div>
+                </div>
+
+                <!-- Form Controls -->
+                <div class="space-y-3">
+                    <!-- Custom Image Upload Button -->
+                    <div id="modal-upload-container">
+                        <label class="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Fotos hinzufügen</label>
+                        <input type="file" id="modal-file-input" accept="image/*" multiple class="hidden" onchange="handleImageUpload(event)">
+                        <button onclick="document.getElementById('modal-file-input').click()" class="w-full flex items-center justify-center gap-2 bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-700 font-semibold py-2.5 px-4 rounded-xl text-sm transition">
+                            <span>📸</span> Kamera / Galerie öffnen (Mehrfachauswahl)
+                        </button>
+                    </div>
+
+                    <!-- Comment input -->
+                    <div>
+                        <label id="modal-comment-label" class="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">Deine Erinnerung / Kommentar</label>
+                        <textarea id="modal-comment" placeholder="Wie war dieser Moment? Schreibe deine Gedanken auf..." class="w-full p-3 border border-stone-300 rounded-xl text-sm focus:outline-emerald-600 focus:ring-1 focus:ring-emerald-600" rows="3"></textarea>
+                    </div>
+
+                    <!-- GÄSTE VISIBILITY SETTING (PRIVACY TOGGLE) -->
+                    <div id="modal-privacy-container" class="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-200 mt-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg">🔒</span>
+                            <div>
+                                <p class="text-xs font-bold text-stone-700">Für Gäste sichtbar</p>
+                                <p class="text-[10px] text-stone-500">Dürfen Eltern/Freunde diesen Moment sehen?</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="modal-guest-visible" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer Buttons -->
+            <div class="p-4 bg-stone-50 border-t border-stone-200 flex gap-2">
+                <button onclick="closeModal()" class="flex-1 bg-stone-200 text-stone-700 font-semibold py-3 rounded-xl text-sm hover:bg-stone-300 transition">Schließen</button>
+                <button id="modal-save-btn" onclick="saveModalData()" class="flex-1 bg-emerald-800 text-white font-semibold py-3 rounded-xl text-sm hover:bg-emerald-950 shadow-md transition">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Neuer Stopp Map-Modal -->
+    <div id="add-stop-modal" class="hidden fixed inset-0 bg-stone-900/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
+            <div class="bg-emerald-800 text-stone-100 p-4 font-bold">📍 Neuen Stopp hinzufügen</div>
+            <div class="p-4 space-y-3">
+                <p class="text-xs text-stone-500">Möchtest du diesen Ort auf deiner Roadtrip-Karte markieren?</p>
+                <input id="new-stop-name" type="text" placeholder="Name des Ortes (z.B. Eiffelturm, Alpenpass)" class="w-full p-2.5 border border-stone-300 rounded-xl text-sm focus:outline-emerald-600">
+                <input id="new-stop-desc" type="text" placeholder="Kurze Beschreibung" class="w-full p-2.5 border border-stone-300 rounded-xl text-sm focus:outline-emerald-600">
+            </div>
+            <div class="p-4 bg-stone-50 border-t border-stone-200 flex gap-2">
+                <button onclick="closeAddStopModal()" class="flex-1 bg-stone-200 text-stone-700 font-semibold py-2.5 rounded-xl text-sm hover:bg-stone-300">Abbrechen</button>
+                <button onclick="saveNewMapStop()" class="flex-1 bg-emerald-800 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-emerald-950">Hinzufügen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Reset Confirm Modal -->
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-stone-900/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
+            <div class="bg-red-800 text-stone-100 p-4 font-bold">⚠️ Zurücksetzen bestätigen</div>
+            <div class="p-4 space-y-3">
+                <p class="text-sm text-stone-600">Möchtest du wirklich alle eingetragenen Fotos, Kommentare und benutzerdefinierten Stopps unwiderruflich löschen und die neuen Standard-Challenges laden?</p>
+            </div>
+            <div class="p-4 bg-stone-50 border-t border-stone-200 flex gap-2">
+                <button onclick="closeConfirmModal()" class="flex-1 bg-stone-200 text-stone-700 font-semibold py-2.5 rounded-xl text-sm hover:bg-stone-300">Abbrechen</button>
+                <button onclick="executeReset()" class="flex-1 bg-red-800 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-red-950">Zurücksetzen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Navigation Bottom Bar -->
+    <nav class="bg-white border-t border-stone-200 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-40 flex justify-around py-2 shadow-lg">
+        <button onclick="switchTab('challenges')" id="tab-btn-challenges" class="flex flex-col items-center justify-center w-20 py-1 text-emerald-800 font-semibold transition-colors duration-200">
+            <span class="text-xl">🏆</span>
+            <span class="text-[10px] mt-0.5">Challenges</span>
+        </button>
+        <button onclick="switchTab('map')" id="tab-btn-map" class="flex flex-col items-center justify-center w-20 py-1 text-stone-400 font-semibold transition-colors duration-200">
+            <span class="text-xl">🗺️</span>
+            <span class="text-[10px] mt-0.5">Karte</span>
+        </button>
+        <button onclick="switchTab('setup')" id="tab-btn-setup" class="flex flex-col items-center justify-center w-20 py-1 text-stone-400 font-semibold transition-colors duration-200">
+            <span class="text-xl">⚙️</span>
+            <span class="text-[10px] mt-0.5">Teilen & Setup</span>
+        </button>
+    </nav>
+
+    <!-- Firebase SDKs für die Echtzeit-Online-Synchronisierung -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- DEINE CLOUD CONFIGURATION ---
+        // Wenn die App in deinem interaktiven Web-Sandbox Canvas läuft, wird die Konfiguration automatisch beigestellt.
+        // Lokal liest sie die Standard-Umgebung aus.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
+            
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'roadtrip-nfc-companion';
+
+        let db = null;
+        let auth = null;
+        let isFirebaseActive = false;
+
+        // Firebase Initialisierung, falls Config vorhanden ist
+        if (firebaseConfig && firebaseConfig.projectId) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                isFirebaseActive = true;
+            } catch (err) {
+                console.warn("Firebase Initialisierung fehlgeschlagen. Nutze LocalStorage Backup.", err);
+            }
+        }
+
+        // --- STANDARD-REISE-DATEN ---
+        const defaultChallenges = [
+            { id: 'c1', title: 'Der perfekte Sonnenaufgang', description: 'Mache ein Bild vom schönsten Sonnenaufgang auf deiner Route.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c2', title: 'Der perfekte Sonnenuntergang', description: 'Halte das spektakulärste Abendrot deiner Reise fest.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c3', title: 'Kuriose Entdeckung', description: 'Fotografiere ein kurioses Verkehrsschild, skurriles Gebäude oder ein bizarres Detail am Wegesrand.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c4', title: 'Fluss, Wasserfall oder Meer', description: 'Finde eine erfrischende Wasserquelle (einen Fluss, wilden Wasserfall, Bergsee oder das Meer) und halte deine Füße oder dein Gesicht ins Bild.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c5', title: 'Die Sehenswürdigkeit', description: 'Fotografiere ein historisches Highlight deiner Reise, aber versuche einen unkonventionellen, extrem lustigen Kamerawinkel!', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c6', title: 'Die lebende Statue', description: 'Finde eine historische Statue auf einem Platz und ahme ihre Pose absolut perfekt und mit eiskaltem, ernstem Blick nach.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c7', title: 'Tierischer Reisebegleiter', description: 'Finde ein Tier am Wegesrand (eine Straßenkatze, eine Kuh in den Bergen, Möwen am Hafen) und mach ein cooles "Crew-Foto" mit deinem neuen Kumpel.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            
+            // Ortsgebundene Spezial-Challenges
+            { id: 'c8', title: 'Konzert-Ekstase in Berlin 🎸', description: 'Halte den emotionalsten oder wildesten Moment des Konzerts in Berlin fest – z.B. mit deinem Band-Merch, dem Ticket oder direkt im Scheinwerferlicht der Menge.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c9', title: 'Ruin-Bar-Entdecker in Budapest 🍻', description: 'Besuche eine der legendären Ruinenbars (z.B. das "Szimpla Kert") und fotografiere den absolut verrücktesten oder skurrilsten Gegenstand, der dort an der Wand oder Decke hängt.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c10', title: 'Draculas Schatten in Sinaia 🌲', description: 'Mach beim Wandern in den dichten, nebligen Bergwäldern rund um Sinaia ein mystisches Foto, das direkt aus einem Vampirfilm stammen könnte.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c11', title: 'Größenwahn in Bukarest 🏛️', description: 'Stelle dich vor den gigantischen Parlamentspalast (das zweitgrößte Gebäude der Welt!) und knipse ein Perspektiven-Foto, bei dem du den Palast scheinbar mit zwei Fingern anhebst.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c12', title: 'Kontinenten-Hopper in Istanbul 🚢', description: 'Fahre mit der Bosporus-Fähre von Europa rüber nach Asien. Mache ein Foto auf dem Deck mit einem traditionellen Glas türkischen Tee (Çay) und der Skyline im Hintergrund.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            
+            // Lieblingsfotos & Erinnerungen
+            { id: 'c13', title: 'Lieblingsfotos 🌟', description: 'Lade hier Fotos hoch, die dir besonders gefallen oder speichere Momente, an die du dich später gerne wieder erinnern möchtest.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { 
+                id: 'c14', 
+                title: 'Falls du mich vergisst… ❤️', 
+                description: 'Bilder, die ich dir mitgeben wollte. Schau sie dir an, wenn du mal Heimweh hast oder deinen Lieblings-Reisepartner vermisst!', 
+                completed: true, 
+                photos: [
+                    'https://images.unsplash.com/photo-1501555088652-021faa106b9b?auto=format&fit=crop&w=600&q=80',
+                    'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=600&q=80',
+                    'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=600&q=80'
+                ], 
+                comment: 'Gute Reise! Ich freue mich unglaublich für dich und dein Abenteuer. Komm gesund und mit fantastischen Geschichten im Gepäck wieder zurück. Ich bin in Gedanken immer dabei! ❤️',
+                visibleForGuests: true
+            }
+        ];
+
+        const defaultStops = [
+            { id: 's1', name: 'Berlin (Konzert & Start)', desc: 'Hier geht das Abenteuer mit großartiger Musik los!', lat: 52.520, lng: 13.405, visited: true, photos: [], comment: '', visibleForGuests: true },
+            { id: 's2', name: 'Budapest (Donau & Ruinen)', desc: 'Brücken, Thermalbäder und atemberaubende Ruinenbars.', lat: 47.497, lng: 19.040, visited: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 's3', name: 'Sinaia (Wandern & Bucegi-Berge)', desc: 'Märchenhafte Schlösser, dichte Nadelwälder und schroffe Berggipfel.', lat: 45.356, lng: 25.551, visited: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 's4', name: 'Bukarest (Kontraste)', desc: 'Das kleine Paris des Ostens mit gigantischer Architektur.', lat: 44.432, lng: 26.103, visited: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 's5', name: 'Istanbul (Das goldene Horn)', desc: 'Endstation der Reise – wo Orient auf Okzident trifft.', lat: 41.008, lng: 28.978, visited: false, photos: [], comment: '', visibleForGuests: true }
+        ];
+
+        // --- GLOBALER STATE ---
+        window.appState = {
+            challenges: [],
+            stops: []
+        };
+
+        window.activeTab = 'challenges';
+        window.mapInstance = null;
+        window.mapMarkers = [];
+        window.currentlyEditingItem = null;
+        window.tempPhotosArray = [];
+        window.tempClickLatlng = null;
+
+        // URL Parameter auswerten
+        const urlParams = new URLSearchParams(window.location.search);
+        // Standardmäßig nutzen wir eine Trip-ID, die über URL übergeben wird
+        window.tripId = urlParams.get('trip') || 'unser_roadtrip';
+        window.role = urlParams.get('role') || 'admin'; // 'admin' oder 'guest'
+        window.isGuestMode = (window.role === 'guest');
+
+        // --- INITIALISIERUNG ---
+        window.onload = async function() {
+            // UI für Gastmodus einstellen
+            if (window.isGuestMode) {
+                document.getElementById('guest-banner').classList.remove('hidden');
+                document.getElementById('app-subtitle').innerText = "Tagebuch im Betrachter-Modus";
+                document.getElementById('challenges-intro').innerText = "Schau dir an, welche Abenteuer auf der Reise gelöst wurden!";
+                document.getElementById('map-intro').innerText = "Entdecke die Route und klicke auf die Pins, um Fotos und Notizen live zu sehen.";
+                
+                // Admin-Karten ausblenden
+                document.getElementById('setup-add-challenge-card').classList.add('hidden');
+                document.getElementById('setup-data-card').classList.add('hidden');
+            }
+
+            // Lade Trip Name ins Input-Feld im Setup
+            document.getElementById('setup-trip-name-input').value = window.tripId;
+            generateNfcLinks();
+
+            // Firebase Starten
+            if (isFirebaseActive) {
+                // Rule 3: Auth first, wait for completion, then start listener
+                try {
+                    await signInAnonymously(auth);
+                } catch (e) {
+                    console.error("Anonyme Anmeldung fehlgeschlagen, arbeite offline:", e);
+                }
+
+                // Listener für Live-Daten aus der Cloud
+                document.getElementById('sync-banner').classList.remove('hidden');
+                document.getElementById('sync-trip-id').innerText = `Trip: ${window.tripId}`;
+                
+                startCloudSync();
+            } else {
+                // Offline Fallback über LocalStorage
+                loadLocalState();
+                renderAll();
+            }
+        };
+
+        // --- CLOUD SYNCHRONISIERUNG (Echtzeit!) ---
+        function startCloudSync() {
+            // Rule 1: Strict Paths -> /artifacts/{appId}/public/data/trips/{tripId}
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', window.tripId);
+            
+            document.getElementById('sync-status').innerText = "Verbinde...";
+
+            // Echtzeit Listener für Datenbankänderungen
+            onSnapshot(docRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.data();
+                    
+                    if (window.isGuestMode) {
+                        // Im Gastmodus filtern wir im Speicher sofort alles raus, was privat markiert ist
+                        window.appState.challenges = (data.challenges || []).filter(c => c.visibleForGuests !== false);
+                        window.appState.stops = (data.stops || []).filter(s => s.visibleForGuests !== false);
+                    } else {
+                        // Der Admin sieht alle Daten
+                        window.appState = data;
+                    }
+                    
+                    document.getElementById('sync-status').innerText = "Live synchronisiert";
+                    renderAll();
+                } else {
+                    // Falls noch kein Trip in der Cloud existiert, lege die Standard-Daten an
+                    if (!window.isGuestMode) {
+                        document.getElementById('sync-status').innerText = "Erstelle Trip in Cloud...";
+                        window.appState = { challenges: defaultChallenges, stops: defaultStops };
+                        saveCloudState();
+                    } else {
+                        document.getElementById('sync-status').innerText = "Warte auf Trip-Daten...";
+                        window.appState = { challenges: [], stops: [] };
+                        renderAll();
+                    }
+                }
+            }, (error) => {
+                console.error("Datenbankverbindungsfehler:", error);
+                document.getElementById('sync-status').innerText = "Offline-Modus aktiv";
+                loadLocalState();
+                renderAll();
+            });
+        }
+
+        function saveCloudState() {
+            if (window.isGuestMode) return; // Gäste dürfen nicht schreiben!
+            
+            if (isFirebaseActive && auth.currentUser) {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', window.tripId);
+                setDoc(docRef, window.appState)
+                    .then(() => {
+                        document.getElementById('sync-status').innerText = "In Cloud gesichert";
+                    })
+                    .catch((err) => {
+                        console.error("Fehler beim Cloud-Upload:", err);
+                        document.getElementById('sync-status').innerText = "Fehler beim Sichern";
+                    });
+            } else {
+                // Offline Speichern
+                localStorage.setItem(`roadtrip_${window.tripId}`, JSON.stringify(window.appState));
+            }
+        }
+
+        // --- OFFLINE STATE LOGIK ---
+        function loadLocalState() {
+            const savedData = localStorage.getItem(`roadtrip_${window.tripId}`);
+            if (savedData) {
+                try {
+                    window.appState = JSON.parse(savedData);
+                } catch (e) {
+                    window.appState = { challenges: defaultChallenges, stops: defaultStops };
+                }
+            } else {
+                window.appState = { challenges: defaultChallenges, stops: defaultStops };
+            }
+        }
+
+        function renderAll() {
+            renderChallenges();
+            renderStopsList();
+            updateChallengeStats();
+            if (window.mapInstance) {
+                renderMapMarkers();
+            }
+        }
+
+        // --- NFC LINK GENERATOR FÜR SETUP ---
+        window.generateNfcLinks = function() {
+            const inputVal = document.getElementById('setup-trip-name-input').value.trim();
+            // Bereinige Leerzeichen
+            const cleanTripId = inputVal.replace(/\s+/g, '_') || 'mein_roadtrip';
+            
+            // Ermittle die Basis URL der aktuell geöffneten App
+            const baseUrl = window.location.origin + window.location.pathname;
+
+            const adminUrl = `${baseUrl}?trip=${cleanTripId}&role=admin`;
+            const guestUrl = `${baseUrl}?trip=${cleanTripId}&role=guest`;
+
+            document.getElementById('link-admin-display').innerText = adminUrl;
+            document.getElementById('link-guest-display').innerText = guestUrl;
+        };
+
+        // --- TAB-NAVIGATION ---
+        window.switchTab = function(tabId) {
+            window.activeTab = tabId;
+            
+            document.getElementById('section-challenges').classList.add('hidden');
+            document.getElementById('section-map').classList.add('hidden');
+            document.getElementById('section-setup').classList.add('hidden');
+            
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+
+            const tabs = ['challenges', 'map', 'setup'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-btn-${t}`);
+                if (t === tabId) {
+                    btn.classList.add('text-emerald-800');
+                    btn.classList.remove('text-stone-400');
+                } else {
+                    btn.classList.add('text-stone-400');
+                    btn.classList.remove('text-emerald-800');
+                }
+            });
+
+            if (tabId === 'map') {
+                setTimeout(initMap, 150);
+            }
+        };
+
+        // --- MAP-LOGIK (Leaflet) ---
+        function initMap() {
+            if (window.mapInstance) {
+                window.mapInstance.invalidateSize();
+                return;
+            }
+
+            // Karte zentrieren über Osteuropa (Mitte der Route)
+            const centerLat = 46.5;
+            const centerLng = 21.0;
+
+            window.mapInstance = L.map('map', {
+                zoomControl: true,
+                attributionControl: false
+            }).setView([centerLat, centerLng], 5);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18
+            }).addTo(window.mapInstance);
+
+            window.mapInstance.on('click', function(e) {
+                if (window.isGuestMode) return; // Betrachter dürfen keine Stopps anlegen
+                window.tempClickLatlng = e.latlng;
+                document.getElementById('add-stop-modal').classList.remove('hidden');
+            });
+
+            renderMapMarkers();
+        }
+
+        function renderMapMarkers() {
+            window.mapMarkers.forEach(marker => window.mapInstance.removeLayer(marker));
+            window.mapMarkers = [];
+
+            window.appState.stops.forEach((stop, index) => {
+                const iconHtml = `<div class="custom-marker ${stop.visited ? 'completed' : ''}">${index + 1}</div>`;
+                const customIcon = L.divIcon({
+                    html: iconHtml,
+                    className: 'clear-marker',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                const marker = L.marker([stop.lat, stop.lng], { icon: customIcon }).addTo(window.mapInstance);
+                
+                marker.on('click', function() {
+                    openDetailModal('stop', stop.id);
+                });
+
+                window.mapMarkers.push(marker);
+            });
+        }
+
+        // --- LIST RENDERING ---
+        function renderChallenges() {
+            const listContainer = document.getElementById('challenges-list');
+            listContainer.innerHTML = '';
+
+            window.appState.challenges.forEach(challenge => {
+                const card = document.createElement('div');
+                card.className = `bg-white p-4 rounded-2xl shadow-sm border transition-all cursor-pointer flex items-center justify-between ${
+                    challenge.completed ? 'border-amber-200 bg-amber-50/40' : 'border-stone-200 hover:border-emerald-500'
+                }`;
+                card.onclick = () => openDetailModal('challenge', challenge.id);
+
+                const photoCount = challenge.photos ? challenge.photos.length : 0;
+                const firstPhoto = photoCount > 0 ? challenge.photos[0] : '';
+
+                card.innerHTML = `
+                    <div class="flex-1 pr-3">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm text-stone-800">${challenge.title}</span>
+                            ${challenge.completed ? '<span class="text-xs bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full">Erledigt</span>' : ''}
+                            ${!window.isGuestMode && !challenge.visibleForGuests ? '<span class="text-[9px] bg-stone-200 text-stone-600 px-1.5 py-0.5 rounded-md font-medium">🔒 Privat</span>' : ''}
+                        </div>
+                        <p class="text-xs text-stone-500 mt-1 line-clamp-2">${challenge.description}</p>
+                    </div>
+                    <div class="flex-shrink-0 relative">
+                        ${firstPhoto 
+                            ? `
+                                <img src="${firstPhoto}" class="w-12 h-12 object-cover rounded-xl border border-stone-200">
+                                ${photoCount > 1 ? `<span class="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white font-bold text-[9px] w-4.5 h-4.5 rounded-full flex items-center justify-center border border-white shadow">+${photoCount - 1}</span>` : ''}
+                              ` 
+                            : `<div class="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-lg text-stone-400">📸</div>`
+                        }
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        function renderStopsList() {
+            const stopsContainer = document.getElementById('stops-list');
+            stopsContainer.innerHTML = '';
+
+            window.appState.stops.forEach((stop, index) => {
+                const card = document.createElement('div');
+                card.className = `bg-white p-3 rounded-xl border flex items-center justify-between cursor-pointer ${
+                    stop.visited ? 'border-amber-200 bg-amber-50/20' : 'border-stone-200'
+                }`;
+                card.onclick = () => {
+                    if (window.mapInstance) {
+                        window.mapInstance.setView([stop.lat, stop.lng], 9);
+                    }
+                    openDetailModal('stop', stop.id);
+                };
+
+                const photoCount = stop.photos ? stop.photos.length : 0;
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="w-6 h-6 rounded-full bg-emerald-800 text-white font-bold text-xs flex items-center justify-center">${index + 1}</span>
+                        <div>
+                            <h4 class="text-xs font-bold text-stone-800 flex items-center gap-1.5">${stop.name} ${!window.isGuestMode && !stop.visibleForGuests ? '<span class="text-[8px] bg-stone-200 text-stone-600 px-1 py-0.2 rounded font-normal">🔒 Privat</span>' : ''}</h4>
+                            <p class="text-[11px] text-stone-500 line-clamp-1">${stop.desc}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        ${stop.visited ? `<span class="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-bold">Besucht (${photoCount})</span>` : '<span class="text-[10px] text-stone-400">Offen</span>'}
+                        <span class="text-stone-400 text-xs">➔</span>
+                    </div>
+                `;
+                stopsContainer.appendChild(card);
+            });
+        }
+
+        function updateChallengeStats() {
+            const total = window.appState.challenges.length;
+            const completed = window.appState.challenges.filter(c => c.completed).length;
+            document.getElementById('challenge-stats').innerText = `${completed}/${total} gelöst`;
+        }
+
+        // --- DETAIL MODAL LOGIK ---
+        window.openDetailModal = function(type, id) {
+            window.currentlyEditingItem = { type, id };
+            window.tempPhotosArray = [];
+
+            let item = null;
+            if (type === 'challenge') {
+                item = window.appState.challenges.find(c => c.id === id);
+                document.getElementById('modal-title').innerText = item.title;
+                document.getElementById('modal-desc').innerText = item.description;
+            } else {
+                item = window.appState.stops.find(s => s.id === id);
+                document.getElementById('modal-title').innerText = `📍 Stopp: ${item.name}`;
+                document.getElementById('modal-desc').innerText = item.desc;
+            }
+
+            // Fotos in Galerie laden
+            if (item.photos && item.photos.length > 0) {
+                window.tempPhotosArray = [...item.photos];
+            }
+
+            renderModalPhotos();
+
+            // Kommentar füllen
+            document.getElementById('modal-comment').value = item.comment || '';
+
+            // Sichtbarkeit für Gäste füllen
+            const isVisible = item.visibleForGuests !== false;
+            document.getElementById('modal-guest-visible').checked = isVisible;
+
+            // Anpassungen für Betrachter-Modus
+            if (window.isGuestMode) {
+                document.getElementById('modal-upload-container').classList.add('hidden');
+                document.getElementById('modal-comment').readOnly = true;
+                document.getElementById('modal-comment-label').innerText = "Notiz von deinem Kumpel";
+                document.getElementById('modal-comment').placeholder = "Noch keine Gedanken festgehalten.";
+                document.getElementById('modal-privacy-container').classList.add('hidden');
+                document.getElementById('modal-save-btn').classList.add('hidden');
+            } else {
+                document.getElementById('modal-upload-container').classList.remove('hidden');
+                document.getElementById('modal-comment').readOnly = false;
+                document.getElementById('modal-comment-label').innerText = "Deine Erinnerung / Kommentar";
+                document.getElementById('modal-comment').placeholder = "Wie war dieser Moment? Schreibe deine Gedanken auf...";
+                document.getElementById('modal-privacy-container').classList.remove('hidden');
+                document.getElementById('modal-save-btn').classList.remove('hidden');
+            }
+
+            document.getElementById('detail-modal').classList.remove('hidden');
+        };
+
+        function renderModalPhotos() {
+            const grid = document.getElementById('modal-images-grid');
+            const placeholder = document.getElementById('modal-img-placeholder');
+            
+            grid.innerHTML = '';
+
+            if (window.tempPhotosArray.length === 0) {
+                grid.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            } else {
+                grid.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+
+                window.tempPhotosArray.forEach((photoUrl, index) => {
+                    const imgContainer = document.createElement('div');
+                    imgContainer.className = 'relative aspect-square bg-stone-200 rounded-xl overflow-hidden shadow-sm group border border-stone-300';
+                    imgContainer.innerHTML = `
+                        <img src="${photoUrl}" class="w-full h-full object-cover">
+                        ${!window.isGuestMode ? `<button onclick="removeTempPhoto(${index})" class="absolute top-1 right-1 bg-red-600/90 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow hover:bg-red-700 transition" title="Foto löschen">&times;</button>` : ''}
+                    `;
+                    grid.appendChild(imgContainer);
+                });
+            }
+        }
+
+        window.removeTempPhoto = function(index) {
+            window.tempPhotosArray.splice(index, 1);
+            renderModalPhotos();
+        };
+
+        window.closeModal = function() {
+            document.getElementById('detail-modal').classList.add('hidden');
+            window.currentlyEditingItem = null;
+        };
+
+        // --- BILD-KOMPRIMIERUNG (600px, 70% Qualität) ---
+        window.handleImageUpload = function(event) {
+            if (window.isGuestMode) return;
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            showToast(`${files.length} Foto(s) werden optimiert...`);
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 500; // Etwas kompakter, um noch schneller über mobile Netze zu synchronisieren!
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Komprimierung auf 65% JPEG-Qualität für rasanten Mobilfunk-Sync
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.65);
+                        
+                        window.tempPhotosArray.push(compressedBase64);
+                        renderModalPhotos();
+                        
+                        showToast("Foto hinzugefügt!");
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            event.target.value = '';
+        };
+
+        // --- SPEICHERN ---
+        window.saveModalData = function() {
+            if (!window.currentlyEditingItem || window.isGuestMode) return;
+
+            const { type, id } = window.currentlyEditingItem;
+            const comment = document.getElementById('modal-comment').value;
+            const isVisible = document.getElementById('modal-guest-visible').checked;
+
+            if (type === 'challenge') {
+                const index = window.appState.challenges.findIndex(c => c.id === id);
+                if (index !== -1) {
+                    window.appState.challenges[index].comment = comment;
+                    window.appState.challenges[index].photos = [...window.tempPhotosArray];
+                    window.appState.challenges[index].visibleForGuests = isVisible;
+                    
+                    if (window.appState.challenges[index].photos.length > 0 || window.appState.challenges[index].comment) {
+                        window.appState.challenges[index].completed = true;
+                    } else {
+                        window.appState.challenges[index].completed = false;
+                    }
+                }
+            } else if (type === 'stop') {
+                const index = window.appState.stops.findIndex(s => s.id === id);
+                if (index !== -1) {
+                    window.appState.stops[index].comment = comment;
+                    window.appState.stops[index].photos = [...window.tempPhotosArray];
+                    window.appState.stops[index].visibleForGuests = isVisible;
+                    
+                    if (window.appState.stops[index].photos.length > 0 || window.appState.stops[index].comment) {
+                        window.appState.stops[index].visited = true;
+                    }
+                }
+            }
+
+            saveCloudState();
+            renderAll();
+            closeModal();
+            showToast("Erfolgreich in Cloud gesichert!");
+        };
+
+        // --- NEUER STOPP (Klick auf Map) ---
+        window.closeAddStopModal = function() {
+            document.getElementById('add-stop-modal').classList.add('hidden');
+            window.tempClickLatlng = null;
+        };
+
+        window.saveNewMapStop = function() {
+            if (window.isGuestMode) return;
+            const name = document.getElementById('new-stop-name').value;
+            const desc = document.getElementById('new-stop-desc').value;
+
+            if (!name) {
+                showToast("Bitte gib dem Stopp einen Namen!");
+                return;
+            }
+
+            const newStop = {
+                id: 'custom_' + Date.now(),
+                name: name,
+                desc: desc || 'Ein toller Ort auf unserer Reise',
+                lat: window.tempClickLatlng.lat,
+                lng: window.tempClickLatlng.lng,
+                visited: false,
+                photos: [],
+                comment: '',
+                visibleForGuests: true
+            };
+
+            window.appState.stops.push(newStop);
+            saveCloudState();
+            renderStopsList();
+            renderMapMarkers();
+            
+            document.getElementById('new-stop-name').value = '';
+            document.getElementById('new-stop-desc').value = '';
+            closeAddStopModal();
+            showToast("Stopp hinzugefügt!");
+        };
+
+        // --- NEUE CUSTOM CHALLENGE ---
+        window.addCustomChallenge = function() {
+            if (window.isGuestMode) return;
+            const title = document.getElementById('new-challenge-title').value;
+            const desc = document.getElementById('new-challenge-desc').value;
+
+            if (!title || !desc) {
+                showToast("Bitte Titel und Beschreibung ausfüllen!");
+                return;
+            }
+
+            const newChallenge = {
+                id: 'challenge_' + Date.now(),
+                title: title,
+                description: desc,
+                completed: false,
+                photos: [],
+                comment: '',
+                visibleForGuests: true
+            };
+
+            window.appState.challenges.push(newChallenge);
+            saveCloudState();
+            renderChallenges();
+            updateChallengeStats();
+
+            document.getElementById('new-challenge-title').value = '';
+            document.getElementById('new-challenge-desc').value = '';
+            showToast("Challenge gespeichert!");
+        };
+
+        // --- RESET LOGIK ---
+        window.resetToDefault = function() {
+            if (window.isGuestMode) return;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        };
+
+        window.closeConfirmModal = function() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+        };
+
+        window.executeReset = function() {
+            if (window.isGuestMode) return;
+            
+            window.appState = { challenges: defaultChallenges, stops: defaultStops };
+            saveCloudState();
+            renderAll();
+            
+            if (window.mapInstance) {
+                window.mapInstance.setView([46.5, 21.0], 5);
+            }
+            closeConfirmModal();
+            showToast("Tagebuch zurückgesetzt!");
+        };
+
+        window.exportData = function() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.appState));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `backup_${window.tripId}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("Lokales Backup exportiert!");
+        };
+
+        // --- TOAST NOTIFICATION ---
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
