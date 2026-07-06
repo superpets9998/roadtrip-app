@@ -320,19 +320,19 @@
 
         // --- STANDARD-REISE-DATEN ---
         const defaultChallenges = [
-            { id: 'c1', title: 'Der perfekte Sonnenaufgang', description: 'Mache ein Bild vom schönsten Sonnenaufgang auf deiner Route.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c1', title: 'Der perfekte Sonnenaufgang', description: 'Mache ein Bild vom schönsten Sonnenaufgang auf deiner Route [Falls du es schaffst dafür schon wach zu sein...oder noch? ;)]', completed: false, photos: [], comment: '', visibleForGuests: true },
             { id: 'c2', title: 'Der perfekte Sonnenuntergang', description: 'Halte das spektakulärste Abendrot deiner Reise fest.', completed: false, photos: [], comment: '', visibleForGuests: true },
             { id: 'c3', title: 'Kuriose Entdeckung', description: 'Fotografiere ein kurioses Verkehrsschild, skurriles Gebäude oder ein bizarres Detail am Wegesrand.', completed: false, photos: [], comment: '', visibleForGuests: true },
             { id: 'c4', title: 'Fluss, Wasserfall oder Meer', description: 'Finde eine erfrischende Wasserquelle (einen Fluss, wilden Wasserfall, Bergsee oder das Meer) und halte deine Füße oder dein Gesicht ins Bild.', completed: false, photos: [], comment: '', visibleForGuests: true },
-            { id: 'c5', title: 'Die Sehenswürdigkeit', description: 'Fotografiere ein historisches Highlight deiner Reise, aber versuche einen unkonventionellen, extrem lustigen Kamerawinkel!', completed: false, photos: [], comment: '', visibleForGuests: true },
-            { id: 'c6', title: 'Die lebende Statue', description: 'Finde eine historische Statue auf einem Platz und ahme ihre Pose absolut perfekt und mit eiskaltem, ernstem Blick nach.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c5', title: 'Die Sehenswürdigkeit', description: 'Fotografiere ein (historisches) Highlight deiner Reise, versuche doch mal einen unkonventionellen, extrem lustigen Kamerawinkel!', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c6', title: 'Die lebende Statue', description: 'Finde eine (historische Statue) auf einem Platz und ahme ihre Pose absolut perfekt nach.', completed: false, photos: [], comment: '', visibleForGuests: true },
             { id: 'c7', title: 'Tierischer Reisebegleiter', description: 'Finde ein Tier am Wegesrand (eine Straßenkatze, eine Kuh in den Bergen, Möwen am Hafen) und mach ein cooles "Crew-Foto" mit deinem neuen Kumpel.', completed: false, photos: [], comment: '', visibleForGuests: true },
             
             // Ortsgebundene Spezial-Challenges
             { id: 'c8', title: 'Konzert-Ekstase in Berlin 🎸', description: 'Halte den emotionalsten oder wildesten Moment des Konzerts in Berlin fest – z.B. mit deinem Band-Merch, dem Ticket oder direkt im Scheinwerferlicht der Menge.', completed: false, photos: [], comment: '', visibleForGuests: true },
-            { id: 'c9', title: 'Ruin-Bar-Entdecker in Budapest 🍻', description: 'Besuche eine der legendären Ruinenbars (z.B. das "Szimpla Kert") und fotografiere den absolut verrücktesten oder skurrilsten Gegenstand, der dort an der Wand oder Decke hängt.', completed: false, photos: [], comment: '', visibleForGuests: true },
-            { id: 'c10', title: 'Draculas Schatten in Sinaia 🌲', description: 'Mach beim Wandern in den dichten, nebligen Bergwäldern rund um Sinaia ein mystisches Foto, das direkt aus einem Vampirfilm stammen könnte.', completed: false, photos: [], comment: '', visibleForGuests: true },
-            { id: 'c11', title: 'Größenwahn in Bukarest 🏛️', description: 'Stelle dich vor den gigantischen Parlamentspalast (das zweitgrößte Gebäude der Welt!) und knipse ein Perspektiven-Foto, bei dem du den Palast scheinbar mit zwei Fingern anhebst.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c9', title: 'Ruinen-Bar-Entdecker in Budapest 🍻', description: 'Wie wäre es denn mit einem Besuch einer der legendären Ruinenbars (z.B. das "Szimpla Kert")? Halte dieses Erlebnis mit einem Foto fest (zB dein Getränk, die Location oder merkwürdige Dekoration).', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c10', title: 'Draculas Schatten in Sinaia 🌲', description: 'Mache beim Wandern in den dichten, nebligen Bergwäldern rund um Sinaia ein mystisches Foto, das direkt aus einem Vampirfilm stammen könnte.', completed: false, photos: [], comment: '', visibleForGuests: true },
+            { id: 'c11', title: 'Größenwahn in Bukarest 🏛️', description: 'Stelle dich vor den gigantischen Parlamentspalast (das zweitgrößte Gebäude der Welt!) und knipse ein Perspektiven-Foto, bei dem du den Palast scheinbar mit zwei Fingern hebst.', completed: false, photos: [], comment: '', visibleForGuests: true },
             { id: 'c12', title: 'Kontinenten-Hopper in Istanbul 🚢', description: 'Fahre mit der Bosporus-Fähre von Europa rüber nach Asien. Mache ein Foto auf dem Deck mit einem traditionellen Glas türkischen Tee (Çay) und der Skyline im Hintergrund.', completed: false, photos: [], comment: '', visibleForGuests: true },
             
             // Lieblingsfotos & Erinnerungen
@@ -340,14 +340,14 @@
             { 
                 id: 'c14', 
                 title: 'Falls du mich vergisst… ❤️', 
-                description: 'Bilder, die ich dir mitgeben wollte. Schau sie dir an, wenn du mal Heimweh hast oder deinen Lieblings-Reisepartner vermisst!', 
+                description: 'Bilder, die ich dir mitgeben wollte. Schau sie dir an, wenn du mal Heimweh hast oder mich vermisst oder ruf mich einfach an und erzähle mir von deinen Erlebnissen!', 
                 completed: true, 
                 photos: [
                     'https://images.unsplash.com/photo-1501555088652-021faa106b9b?auto=format&fit=crop&w=600&q=80',
                     'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=600&q=80',
                     'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=600&q=80'
                 ], 
-                comment: 'Gute Reise! Ich freue mich unglaublich für dich und dein Abenteuer. Komm gesund und mit fantastischen Geschichten im Gepäck wieder zurück. Ich bin in Gedanken immer dabei! ❤️',
+                comment: 'Gute Reise und ganz viel Spaß bei deinen Abenteuern! Komm gesund und mit fantastischen Geschichten im Gepäck wieder zurück. Ich freu mich schon, wenn du mir zuhause dann alles ausführlich berichtest und bin in Gedanken auch mit dabei! Ich liebe dich❤️',
                 visibleForGuests: true
             }
         ];
@@ -970,13 +970,3 @@
 </body>
 </html>
 ```
-
-### So nutzt du die Löschfunktion:
-1. Öffne die Challenge (oder den Stopp), die du löschen möchtest.
-2. Oben rechts im grünen Header-Balken siehst du jetzt ein kleines **Mülleimer-Symbol (🗑️)** direkt neben dem Schließen-Kreuz ("&times;").
-3. Wenn du darauf tippst, öffnet sich ein schickes, an deine App angepasstes Bestätigungsfenster: *"Element löschen?"*.
-4. Sobald du auf **Löschen** klickst, wird das Element aus deiner Datenbank entfernt, die App speichert das sofort in der Cloud ab, aktualisiert die Liste und das Fenster schließt sich.
-
-*Hinweis:* Im Lese-Modus für die Eltern (`role=guest`) ist das Mülleimer-Symbol automatisch ausgeblendet, sodass sie keine Challenges löschen können.
-
-Kopiere den neuen Code einfach komplett über deine alte `index.html` in VS Code und lade sie wieder im Web-Interface deines GitHub-Repositories hoch. Viel Spaß beim fleißigen Aufräumen und Erstellen deines Roadtrips!
