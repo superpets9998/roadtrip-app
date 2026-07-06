@@ -585,6 +585,10 @@
 
         function saveCloudState() {
             if (window.isGuestMode) return;
+
+            console.log("--- Firebase Check ---");
+            console.log("isFirebaseActive:", isFirebaseActive);
+            console.log("auth.currentUser:", auth.currentUser);
             
             if (isFirebaseActive && auth.currentUser) {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'trips', window.tripId);
